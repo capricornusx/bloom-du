@@ -27,5 +27,7 @@ jobs:
         run: go build -v ./...
 
       - name: Test
+        with:
+          go-version: ${{ matrix.go-version }}
         run: CGO_ENABLED=1 GOEXPERIMENT=loopvar go test -race ./...
 
