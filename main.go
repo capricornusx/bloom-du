@@ -60,18 +60,17 @@ func main() {
 		},
 	}
 
-	rootCmd.Flags().StringP("source_file", "c", "source.txt", "path to config file")
+	rootCmd.Flags().StringP("source", "s", "source.txt", "path to source data file")
 	rootCmd.Flags().StringP("port", "p", "8515", "port to serve on")
 	rootCmd.Flags().StringP("address", "a", "0.0.0.0", "interface to serve")
 	rootCmd.Flags().StringP("log_level", "", "info", "set the log level: trace, debug, info, error, fatal or none")
 
-	viper.BindPFlag("source_file", rootCmd.PersistentFlags().Lookup("source_file"))
-
+	viper.BindPFlag("source", rootCmd.PersistentFlags().Lookup("source"))
 	viper.BindPFlag("port", rootCmd.PersistentFlags().Lookup("port"))
 	viper.BindPFlag("address", rootCmd.PersistentFlags().Lookup("address"))
 	viper.BindPFlag("log_level", rootCmd.PersistentFlags().Lookup("log_level"))
 
-	viper.SetDefault("config_file", "source.txt")
+	viper.SetDefault("source", "source.txt")
 	viper.SetDefault("port", "8515")
 	viper.SetDefault("address", "0.0.0.0")
 	viper.SetDefault("log_level", "info")

@@ -29,7 +29,7 @@ type Response struct {
 }
 
 func Start() {
-	sourceFile := viper.GetString("source_file")
+	sourceFile := viper.GetString("source")
 	Filter = bloom.CreateFilter(sourceFile)
 	FilterProperty.WithLabelValues("size").Set(float64(Filter.SBF.Cells()))
 	CurrentConfig.WithLabelValues(
