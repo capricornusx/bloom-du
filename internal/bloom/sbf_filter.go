@@ -90,7 +90,7 @@ func (f *StableBloomFilter) loadStructFromFile() (int64, error) {
 
 func (f *StableBloomFilter) Boostrap(sourceFile string) *StableBloomFilter {
 	if sourceFile == "" {
-		log.Println("Start without data")
+		log.Println("Start empty filter")
 		return f
 	}
 

@@ -31,6 +31,7 @@ yarn-error.log
 
 # Miscellaneous
 testem.log
+*.bloom
 
 # System files
 .DS_Store

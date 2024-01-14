@@ -70,7 +70,7 @@ func main() {
 	viper.BindPFlag("address", rootCmd.PersistentFlags().Lookup("address"))
 	viper.BindPFlag("log_level", rootCmd.PersistentFlags().Lookup("log_level"))
 
-	viper.SetDefault("source", "source.txt")
+	viper.SetDefault("source", "")
 	viper.SetDefault("port", "8515")
 	viper.SetDefault("address", "0.0.0.0")
 	viper.SetDefault("log_level", "info")

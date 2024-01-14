@@ -23,7 +23,33 @@
 curl -X POST --location "http://localhost:8515/api/add?value=blablabla" \
 -H "Accept: application/json" 
 ```
-Ещё примеры использования API смотрите в файле [api.http](internal%2Fapi%2Fapi.http)
+
+
+Проверить наличие элемента в фильтре:
+```sh
+curl -X GET --location "http://localhost:8515/api/check?value=12344" \
+    -H "Accept: application/json"
+```
+
+
+Метрики, которые можно собирать через Prometheus имеют префикс `bloom_du_*`, например:
+
+
+```sh
+curl -X GET --location "http://localhost:8515/metrics"
+```
+
+ - `bloom_du_config_info`
+ - `bloom_du_elements_total`
+ - `bloom_du_storage_query_duration_nanoseconds`
+
+Кроме этого, есть стандартные метрики, которые отдаёт Go.
+
+Дашборд для Grafana - [grafana-bloom-du.json](internal%2Futils%2Fgrafana-bloom-du.json)
+
+
+
+
 
 
 
@@ -43,6 +69,10 @@ curl -X POST --location "http://localhost:8515/api/add?value=blablabla" \
 Содержит в себе реализации стабильного фильтра Блума и других Probabilistic (вероятностных) структур.
 4. [Bitmap-индексы в Go: поиск на дикой скорости](https://habr.com/ru/companies/badoo/articles/451938/) Крутая статья и комменты о схожей теме.
 5. [Redis bitmaps – Fast, easy, realtime metrics](https://spoolblog.wordpress.com/2011/11/29/fast-easy-realtime-metrics-using-redis-bitmaps/)
+6. [Probabilistic Data Structures for Web Analytics and Data Mining](https://highlyscalable.wordpress.com/2012/05/01/probabilistic-structures-web-analytics-data-mining/)
+7. [Roaring Bitmaps and pgfaceting: Fast counting across large datasets in Postgres](https://pganalyze.com/blog/5mins-postgres-roaring-bitmaps-pgfaceting-query-performance)
+8. [Roaring bitmaps - A better compressed bitset](https://roaringbitmap.org/about/)
+9. [Daniel Lemire](https://github.com/lemire) is a computer science professor. Roaring bitmaps contributor
 
 
 
