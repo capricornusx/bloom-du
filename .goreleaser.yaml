@@ -105,3 +105,16 @@ signs:
       - $artifact
     signature: ${artifact}.asc
     artifacts: checksum
+
+# TODO:
+#nfpms:
+#  - package_name: bloom-du
+#    homepage: https://github.com/capricornusx/bloom-du
+#    maintainer: Dmitry Dubinin <capricornusx@gmail.com>
+#    description: |-
+#      HTTP API for Bloom filter
+#    formats:
+#      - apk
+#      - deb
+#      - rpm
+#      - archlinux
