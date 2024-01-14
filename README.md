@@ -41,6 +41,8 @@ curl -X POST --location "http://localhost:8515/api/add?value=blablabla" \
    - [RedisBloom](https://github.com/RedisBloom/RedisBloom) Github модуля, входящего в состав Redis Stack
 3. [Библиотека](github.com/tylertreat/BoomFilters) на Go, которая использована в этом проект как основная.
 Содержит в себе реализации стабильного фильтра Блума и других Probabilistic (вероятностных) структур.
+4. [Bitmap-индексы в Go: поиск на дикой скорости](https://habr.com/ru/companies/badoo/articles/451938/) Крутая статья и комменты о схожей теме.
+5. [Redis bitmaps – Fast, easy, realtime metrics](https://spoolblog.wordpress.com/2011/11/29/fast-easy-realtime-metrics-using-redis-bitmaps/)
 
 
 
