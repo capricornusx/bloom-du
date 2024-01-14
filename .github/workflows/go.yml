@@ -24,12 +24,12 @@ jobs:
         run: go mod download
 
       - name: Build
+        run: go build -v ./...
         with:
           go-version: ${{ matrix.go-version }}
-        run: go build -v ./...
 
       - name: Test
+        run: CGO_ENABLED=1 GOEXPERIMENT=loopvar go test -race ./...
         with:
           go-version: ${{ matrix.go-version }}
-        run: CGO_ENABLED=1 GOEXPERIMENT=loopvar go test -race ./...
 
