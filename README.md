@@ -1,6 +1,8 @@
+[![Go](https://github.com/capricornusx/bloom-du/actions/workflows/go.yml/badge.svg)](https://github.com/capricornusx/bloom-du/actions/workflows/go.yml)
+[![Lint](https://github.com/capricornusx/bloom-du/actions/workflows/lint.yml/badge.svg)](https://github.com/capricornusx/bloom-du/actions/workflows/lint.yml)
+[![Go Report Card](https://goreportcard.com/badge/github.com/capricornusx/bloom-du)](https://goreportcard.com/report/github.com/capricornusx/bloom-du)
+
 ### Bloom-du (HTTP API для фильтра Блума)
-
-
 
 Добавить данные в фильтр можно несколькими способами:
 #### 1. Загрузка из файла (импорт)
