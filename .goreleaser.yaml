@@ -98,6 +98,9 @@ signs:
   -
     cmd: gpg
     args:
+      - --batch
+      - -u
+      - "{{ .Env.GPG_FINGERPRINT }}"
       - --output
       - $signature
       - --clear-sign
