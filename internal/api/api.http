@@ -1,0 +1,17 @@
+### Check phone
+GET http://localhost:8515/api/check?value=12344
+Accept: application/json
+Content-Type: application/json
+
+### Add phone
+POST http://localhost:8515/api/add?value=9991110011
+Accept: application/json
+Content-Type: application/json
+
+
+### Check metrics
+GET http://localhost:8515/metrics
+
+### Check health
+GET http://localhost:8515/health
+
