@@ -17,17 +17,6 @@ release:
 
     - Read the [Documentation](https://github.com/capricornusx/bloom-du)
   draft: true
-brews:
-  -
-    repository:
-      name: bloom-du
-    folder: Formula
-    description: "HTTP API for Bloom filter"
-    commit_author:
-      name: Dubinin Dmitry
-      email: capricornusx@gmail.com
-    install: bin.install "bloom-du"
-    homepage: "https://github.com/capricornusx/bloom-du"
 builds:
   - goos:
       - linux
