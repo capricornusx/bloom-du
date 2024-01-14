@@ -1,0 +1,107 @@
+project_name: bloom-du
+
+before:
+  hooks:
+    - go mod tidy
+
+release:
+  github:
+    owner: capricornusx
+    name: bloom-du
+  name_template: '{{.Tag}}'
+  prerelease: auto
+  footer: |
+    **Full Changelog**: https://github.com/capricornusx/bloom-du/compare/{{ .PreviousTag }}...{{ .Tag }}
+
+    ## What to do next?
+
+    - Read the [Documentation](https://github.com/capricornusx/bloom-du)
+  draft: true
+brews:
+  -
+    repository:
+      name: bloom-du
+    folder: Formula
+    description: "HTTP API for Bloom filter"
+    commit_author:
+      name: Dubinin Dmitry
+      email: capricornusx@gmail.com
+    install: bin.install "bloom-du"
+    homepage: "https://github.com/capricornusx/bloom-du"
+builds:
+  - goos:
+      - linux
+      - darwin
+    goarch:
+      - amd64
+      - "386"
+      - arm
+      - arm64
+    ignore:
+      - goos: darwin
+        goarch: "386"
+      - goos: windows
+        goarch: "386"
+      - goos: freebsd
+        goarch: "386"
+      - goos: darwin
+        goarch: arm
+      - goos: windows
+        goarch: arm
+      - goos: freebsd
+        goarch: arm
+      - goos: windows
+        goarch: arm64
+      - goos: freebsd
+        goarch: arm64
+    main: .
+
+    ldflags: "-s -w -X 'internal/build/build.go={{.Version}}'"
+    binary: bloom-du
+    env:
+      # https://github.com/goreleaser/goreleaser/issues/225
+      - CGO_ENABLED=0
+archives:
+  - id: bloom-du
+    name_template: '{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}'
+    format: tar.gz
+    files:
+      - LICENSE*
+      - README*
+      - CHANGELOG*
+    format_overrides:
+      - goos: windows
+        format: zip
+checksum:
+  name_template: '{{ .ProjectName }}_{{ .Version }}_checksums.txt'
+
+changelog:
+  sort: asc
+  use: github
+  filters:
+    exclude:
+      - Merge pull request
+      - Merge remote-tracking branch
+      - Merge branch
+  groups:
+    - title: 'New Features'
+      regexp: "^.*feat[(\\w)]*:+.*$"
+      order: 0
+    - title: 'Bug fixes'
+      regexp: "^.*fix[(\\w)]*:+.*$"
+      order: 10
+    - title: Other work
+      order: 999
+
+dist: dist
+signs:
+  -
+    cmd: gpg
+    args:
+      - --output
+      - $signature
+      - --clear-sign
+      - --detach-sig
+      - $artifact
+    signature: ${artifact}.asc
+    artifacts: checksum

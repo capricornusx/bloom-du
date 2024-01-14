@@ -1,6 +1,7 @@
 .env*
 .idea
 /data
+/dist
 /export.sql
 dump.rdb
 .jekyll-cache
