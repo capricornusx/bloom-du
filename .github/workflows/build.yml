@@ -6,18 +6,19 @@ jobs:
 
     strategy:
       matrix:
-        go-version: [~1.21, ^1]
+        go-version: [ 1.21.5 ]
     runs-on: self-hosted
     env:
       GO111MODULE: "on"
     steps:
-      - name: Install Go
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.21'
-
-      - name: Checkout code
-        uses: actions/checkout@v4
+          go-version: ${{ matrix.go-version }}
 
       - name: Download Go modules
         run: go mod download
