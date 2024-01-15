@@ -43,9 +43,10 @@ func Start() {
 
 func Checkpoint() {
 	start := time.Now()
-	Filter.Checkpoint()
-	elapsed := utils.StopWatchLog(start, "Checkpoint done")
-	QueryDuration.WithLabelValues("Checkpoint").Observe(elapsed)
+	if Filter.Checkpoint() {
+		elapsed := utils.StopWatchLog(start, "Checkpoint done")
+		QueryDuration.WithLabelValues("Checkpoint").Observe(elapsed)
+	}
 }
 
 func handleCheck(w http.ResponseWriter, r *http.Request) {

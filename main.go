@@ -1,12 +1,16 @@
 package main
 
 import (
+	"bloom-du/internal/utils"
 	"context"
 	"fmt"
+	"github.com/mattn/go-isatty"
+	"github.com/rs/zerolog"
 	"net/http"
 	"os"
 	"os/signal"
 	"runtime"
+	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -25,6 +29,22 @@ func main() {
 		Short: "bloom-du - Bloom Filter implementation",
 		Long:  `bloom-du - Bloom Filter implementation`,
 		Run: func(cmd *cobra.Command, args []string) {
+
+			viper.SetDefault("source", "")
+			viper.SetDefault("port", "8515")
+			viper.SetDefault("address", "0.0.0.0")
+			viper.SetDefault("log_level", "info")
+
+			bindPFlags := []string{"source", "port", "address", "log_level"}
+			for _, flag := range bindPFlags {
+				_ = viper.BindPFlag(flag, cmd.Flags().Lookup(flag))
+			}
+
+			file := setupLogging()
+			if file != nil {
+				defer func() { _ = file.Close() }()
+			}
+
 			httpServer, err := api.RunHTTPServers()
 			if err != nil {
 				log.Fatal().Msgf("error running HTTP server: %v", err)
@@ -65,15 +85,6 @@ func main() {
 	rootCmd.Flags().StringP("address", "a", "0.0.0.0", "interface to serve")
 	rootCmd.Flags().StringP("log_level", "", "info", "set the log level: trace, debug, info, error, fatal or none")
 
-	viper.BindPFlag("source", rootCmd.PersistentFlags().Lookup("source"))
-	viper.BindPFlag("port", rootCmd.PersistentFlags().Lookup("port"))
-	viper.BindPFlag("address", rootCmd.PersistentFlags().Lookup("address"))
-	viper.BindPFlag("log_level", rootCmd.PersistentFlags().Lookup("log_level"))
-
-	viper.SetDefault("source", "")
-	viper.SetDefault("port", "8515")
-	viper.SetDefault("address", "0.0.0.0")
-	viper.SetDefault("log_level", "info")
 	var versionCmd = &cobra.Command{
 		Use:   "version",
 		Short: "bloom-du version information",
@@ -141,4 +152,50 @@ func handleSignals(infoCh chan<- os.Signal, httpServer *http.Server) {
 		default:
 		}
 	}
+}
+
+func configureConsoleWriter() {
+	if isTerminalAttached() {
+		log.Logger = log.Output(zerolog.ConsoleWriter{
+			Out:                 os.Stdout,
+			TimeFormat:          "2006-01-02 15:04:05",
+			FormatLevel:         utils.ConsoleFormatLevel(),
+			FormatErrFieldName:  utils.ConsoleFormatErrFieldName(),
+			FormatErrFieldValue: utils.ConsoleFormatErrFieldValue(),
+		})
+	}
+}
+
+func isTerminalAttached() bool {
+	//goland:noinspection GoBoolExpressions – Goland is not smart enough here.
+	return isatty.IsTerminal(os.Stdout.Fd()) && runtime.GOOS != "windows"
+}
+
+func setupLogging() *os.File {
+	configureConsoleWriter()
+	var logLevelMatches = map[string]zerolog.Level{
+		"NONE":  zerolog.NoLevel,
+		"TRACE": zerolog.TraceLevel,
+		"DEBUG": zerolog.DebugLevel,
+		"INFO":  zerolog.InfoLevel,
+		"WARN":  zerolog.WarnLevel,
+		"ERROR": zerolog.ErrorLevel,
+		"FATAL": zerolog.FatalLevel,
+	}
+	logLevel, ok := logLevelMatches[strings.ToUpper(viper.GetString("log_level"))]
+	if !ok {
+		logLevel = zerolog.InfoLevel
+	}
+	zerolog.SetGlobalLevel(logLevel)
+	if viper.IsSet("log_file") && viper.GetString("log_file") != "" {
+		f, err := os.OpenFile(viper.GetString("log_file"), os.O_RDWR|os.O_CREATE|os.O_APPEND, 0644)
+		if err != nil {
+			log.Fatal().Msgf("error opening log file: %v", err)
+		}
+		log.Logger = log.Output(f)
+		return f
+	}
+
+	return nil
+
 }
