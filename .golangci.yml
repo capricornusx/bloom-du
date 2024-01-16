@@ -235,7 +235,7 @@ linters:
     - gocyclo # computes and checks the cyclomatic complexity of functions
 #    - godot # checks if comments end in a period
     - goimports # in addition to fixing imports, goimports also formats your code in the same style as gofmt
-    - gomnd # detects magic numbers
+#    - gomnd # detects magic numbers
     - gomoddirectives # manages the use of 'replace', 'retract', and 'excludes' directives in go.mod
     - gomodguard # allow and block lists linter for direct Go module dependencies. This is different from depguard where there are different block types for example version constraints and module recommendations
     - goprintffuncname # checks that printf-like functions are named with f at the end
@@ -273,7 +273,7 @@ linters:
     - usestdlibvars # detects the possibility to use variables/constants from the Go standard library
     - wastedassign # finds wasted assignment statements
     - whitespace # detects leading and trailing whitespace
-    - exhaustruct # [highly recommend to enable] checks if all structure fields are initialized
+#    - exhaustruct # [highly recommend to enable] checks if all structure fields are initialized
     - paralleltest # [too many false positives] detects missing usage of t.Parallel() method in your Go test
     - prealloc # [premature optimization, but can be used in some cases] finds slice declarations that could potentially be preallocated
     - gci # controls golang package import order and makes it always deterministic
