@@ -1,11 +1,8 @@
 package main
 
 import (
-	"bloom-du/internal/utils"
 	"context"
 	"fmt"
-	"github.com/mattn/go-isatty"
-	"github.com/rs/zerolog"
 	"net/http"
 	"os"
 	"os/signal"
@@ -15,12 +12,15 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/mattn/go-isatty"
+	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
 	"bloom-du/internal/api"
 	"bloom-du/internal/build"
+	"bloom-du/internal/utils"
 )
 
 func main() {
