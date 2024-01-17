@@ -17,7 +17,8 @@ type BFilter struct {
 	needCheckpoint bool // true if new element added. False if not AND last checkpoint success
 }
 
-// Create creating and bootstrap SBF from struct file if exist OR loading text data as source
+// TODO не сделано ещё
+// Create creating and bootstrap SB from struct file if exist OR loading text data as source
 func Create(sourceFile string) *BFilter {
 	defaultBf := boom.NewBloomFilter(1_000_000_000, 0.0001)
 

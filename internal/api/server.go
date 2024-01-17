@@ -36,7 +36,7 @@ var (
 			Namespace: metricsNamespace,
 			Name:      "config_info",
 			Help:      "config",
-		}, []string{"cells", "k", "fpRate", "build"},
+		}, []string{"cells", "k", "fpRate", "stablePoint", "build"},
 	)
 	Elements = prometheus.NewCounterVec(
 		prometheus.CounterOpts{

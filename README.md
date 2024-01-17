@@ -72,6 +72,9 @@ curl -X GET --location "http://localhost:8515/metrics"
       Вариант редиса, который имеет из коробки, в том числе фильтр Блума.
    - [RedisBloom](https://github.com/RedisBloom/RedisBloom) модуль, входящий в состав Redis Stack
    - [Redis bitmaps – Fast, easy, realtime metrics](https://spoolblog.wordpress.com/2011/11/29/fast-easy-realtime-metrics-using-redis-bitmaps/)
+   - [Using Probabilistic Data Structures in Redis](https://semaphoreci.com/blog/probabilistic-data-structures-redis)
+   - [Understanding Probabilistic Data Structures](https://github.com/guyroyse/understanding-probabilistic-data-structures)
+   - [Bloom Filter Calculator](https://hur.st/bloomfilter) Калькулятор для классической реализации Фильтра Блума
 
 3. [Библиотека](https://github.com/tylertreat/BoomFilters) на Go, которая использована в этом проект как основная.
 Содержит в себе реализации стабильного фильтра Блума и других Probabilistic (вероятностных) структур.
@@ -79,6 +82,7 @@ curl -X GET --location "http://localhost:8515/metrics"
 5. [Probabilistic Data Structures for Web Analytics and Data Mining](https://highlyscalable.wordpress.com/2012/05/01/probabilistic-structures-web-analytics-data-mining/)
 6. [Roaring bitmaps - A better compressed bitset](https://roaringbitmap.org/about/)
 7. [Daniel Lemire](https://github.com/lemire) is a computer science professor. Roaring bitmaps contributor
+8. [Probabilistic Data Structures and Algorithms](https://github.com/gakhov)
 
 
 

@@ -57,11 +57,56 @@
           },
           "unit": "short"
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "fpr"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "none"
+              },
+              {
+                "id": "decimals",
+                "value": 9
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "cells"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "short"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "stable_point"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "none"
+              },
+              {
+                "id": "decimals",
+                "value": 6
+              }
+            ]
+          }
+        ]
       },
       "gridPos": {
         "h": 4,
-        "w": 3,
+        "w": 12,
         "x": 0,
         "y": 1
       },
@@ -89,6 +134,7 @@
             "uid": "PBFA97CFB590B2093"
           },
           "editorMode": "code",
+          "exemplar": false,
           "expr": "sum(bloom_du_filter_properties) by (type)",
           "instant": false,
           "legendFormat": "__auto",
@@ -96,7 +142,7 @@
           "refId": "A"
         }
       ],
-      "title": "Max Filter Size",
+      "title": "Filter State",
       "type": "stat"
     },
     {
@@ -146,7 +192,7 @@
       "gridPos": {
         "h": 4,
         "w": 12,
-        "x": 3,
+        "x": 12,
         "y": 1
       },
       "id": 4,
@@ -197,6 +243,200 @@
         }
       ],
       "type": "table"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PBFA97CFB590B2093"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "decimals": 9,
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 5
+      },
+      "id": 17,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
+          "editorMode": "code",
+          "expr": "bloom_du_filter_properties{type=\"fpr\"}",
+          "instant": false,
+          "legendFormat": "FPR",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "False Positive Rate",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PBFA97CFB590B2093"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 5
+      },
+      "id": 18,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
+          "editorMode": "code",
+          "exemplar": false,
+          "expr": "bloom_du_filter_properties{type=\"stable_point\"}",
+          "instant": false,
+          "legendFormat": "stable_point",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "stable_point",
+      "type": "timeseries"
     },
     {
       "datasource": {
@@ -264,7 +504,7 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 5
+        "y": 13
       },
       "id": 2,
       "options": {
@@ -365,7 +605,7 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 13
+        "y": 21
       },
       "id": 5,
       "options": {
@@ -406,7 +646,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 21
+        "y": 29
       },
       "id": 7,
       "panels": [],
@@ -478,7 +718,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 22
+        "y": 30
       },
       "id": 8,
       "links": [],
@@ -505,7 +745,7 @@
           "expr": "go_memstats_mspan_inuse_bytes{instance=~\"$instance\"}",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "memstats_mspan_inuse_bytes {{instance}}",
+          "legendFormat": "memstats_mspan_inuse_bytes",
           "range": true,
           "refId": "A"
         },
@@ -518,7 +758,7 @@
           "expr": "go_memstats_mspan_sys_bytes{instance=~\"$instance\"}",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "memstats_mspan_sys_bytes {{instance}}",
+          "legendFormat": "memstats_mspan_sys_bytes",
           "range": true,
           "refId": "B"
         },
@@ -528,10 +768,10 @@
             "uid": "PBFA97CFB590B2093"
           },
           "editorMode": "code",
-          "expr": "go_memstats_mcache_inuse_bytes{job=~\"misc_mag.*\", instance=~\"$instance\"}",
+          "expr": "go_memstats_mcache_inuse_bytes{instance=~\"$instance\"}",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "memstats_mcache_inuse_bytes {{instance}}",
+          "legendFormat": "memstats_mcache_inuse_bytes",
           "range": true,
           "refId": "C"
         },
@@ -541,10 +781,10 @@
             "uid": "PBFA97CFB590B2093"
           },
           "editorMode": "code",
-          "expr": "go_memstats_mcache_sys_bytes{job=~\"misc_mag.*\", instance=~\"$instance\"}",
+          "expr": "go_memstats_mcache_sys_bytes{instance=~\"$instance\"}",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "memstats_mcache_sys_bytes {{instance}}",
+          "legendFormat": "memstats_mcache_sys_bytes",
           "range": true,
           "refId": "D"
         },
@@ -554,10 +794,10 @@
             "uid": "PBFA97CFB590B2093"
           },
           "editorMode": "code",
-          "expr": "go_memstats_buck_hash_sys_bytes{job=~\"misc_mag.*\", instance=~\"$instance\"}",
+          "expr": "go_memstats_buck_hash_sys_bytes{instance=~\"$instance\"}",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "memstats_buck_hash_sys_bytes {{instance}}",
+          "legendFormat": "memstats_buck_hash_sys_bytes",
           "range": true,
           "refId": "E"
         },
@@ -567,10 +807,10 @@
             "uid": "PBFA97CFB590B2093"
           },
           "editorMode": "code",
-          "expr": "go_memstats_gc_sys_bytes{job=~\"misc_mag.*\", instance=~\"$instance\"}",
+          "expr": "go_memstats_gc_sys_bytes{instance=~\"$instance\"}",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "memstats_gc_sys_bytes {{instance}}",
+          "legendFormat": "memstats_gc_sys_bytes",
           "range": true,
           "refId": "F"
         },
@@ -580,10 +820,10 @@
             "uid": "PBFA97CFB590B2093"
           },
           "editorMode": "code",
-          "expr": "go_memstats_other_sys_bytes{job=~\"misc_mag.*\", instance=~\"$instance\"} - go_memstats_other_sys_bytes{job=~\"misc_mag.*\", instance=~\"$instance\"}",
+          "expr": "go_memstats_other_sys_bytes{instance=~\"$instance\"} - go_memstats_other_sys_bytes{instance=~\"$instance\"}",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "bytes of memory are used for other runtime allocations {{instance}}",
+          "legendFormat": "bytes of memory are used for other runtime allocations",
           "range": true,
           "refId": "G"
         },
@@ -593,10 +833,10 @@
             "uid": "PBFA97CFB590B2093"
           },
           "editorMode": "code",
-          "expr": "go_memstats_next_gc_bytes{job=~\"misc_mag.*\", instance=~\"$instance\"}",
+          "expr": "go_memstats_next_gc_bytes{instance=~\"$instance\"}",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "memstats_next_gc_bytes {{instance}}",
+          "legendFormat": "memstats_next_gc_bytes",
           "range": true,
           "refId": "H"
         }
@@ -669,7 +909,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 22
+        "y": 30
       },
       "id": 9,
       "links": [],
@@ -693,12 +933,12 @@
             "uid": "PBFA97CFB590B2093"
           },
           "editorMode": "code",
-          "expr": "go_memstats_heap_alloc_bytes{instance=~\"$instance\"}",
+          "expr": "go_memstats_heap_sys_bytes{instance=~\"$instance\"}",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "heap_alloc_bytes {{instance}}",
+          "legendFormat": "heap_sys_bytes",
           "range": true,
-          "refId": "B"
+          "refId": "A"
         },
         {
           "datasource": {
@@ -706,12 +946,12 @@
             "uid": "PBFA97CFB590B2093"
           },
           "editorMode": "code",
-          "expr": "go_memstats_heap_sys_bytes{instance=~\"$instance\"}",
+          "expr": "go_memstats_heap_alloc_bytes{instance=~\"$instance\"}",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "heap_sys_bytes {{instance}}",
+          "legendFormat": "heap_alloc_bytes",
           "range": true,
-          "refId": "A"
+          "refId": "B"
         },
         {
           "datasource": {
@@ -722,7 +962,7 @@
           "expr": "go_memstats_heap_idle_bytes{job=~\"misc_mag.*\", instance=~\"$instance\"}",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "heap_idle_bytes {{instance}}",
+          "legendFormat": "heap_idle_bytes",
           "range": true,
           "refId": "C"
         },
@@ -735,7 +975,7 @@
           "expr": "go_memstats_heap_inuse_bytes{job=~\"misc_mag.*\", instance=~\"$instance\"}",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "heap_inuse_bytes {{instance}}",
+          "legendFormat": "heap_inuse_bytes",
           "range": true,
           "refId": "D"
         },
@@ -748,7 +988,7 @@
           "expr": "go_memstats_heap_released_bytes{job=~\"misc_mag.*\", instance=~\"$instance\"}",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "heap_released_bytes {{instance}}",
+          "legendFormat": "heap_released_bytes",
           "range": true,
           "refId": "E"
         }
@@ -834,7 +1074,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 30
+        "y": 38
       },
       "id": 10,
       "links": [],
@@ -861,7 +1101,7 @@
           "expr": "go_memstats_stack_inuse_bytes{instance=~\"$instance\"}",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "inuse {{instance}}",
+          "legendFormat": "inuse",
           "range": true,
           "refId": "A"
         },
@@ -874,7 +1114,7 @@
           "expr": "go_memstats_stack_sys_bytes{instance=~\"$instance\"}",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "sys {{instance}}",
+          "legendFormat": "sys",
           "range": true,
           "refId": "B"
         }
@@ -947,7 +1187,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 30
+        "y": 38
       },
       "id": 11,
       "links": [],
@@ -974,7 +1214,7 @@
           "expr": "go_memstats_sys_bytes{instance=~\"$instance\"}",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "{{instance}}",
+          "legendFormat": "sys_bytes",
           "range": true,
           "refId": "A"
         }
@@ -1047,7 +1287,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 38
+        "y": 46
       },
       "id": 12,
       "links": [],
@@ -1074,7 +1314,7 @@
           "expr": "go_memstats_mallocs_total{instance=~\"$instance\"} - go_memstats_frees_total",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "{{instance}}",
+          "legendFormat": "Live objects",
           "range": true,
           "refId": "A"
         }
@@ -1148,7 +1388,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 38
+        "y": 46
       },
       "id": 13,
       "links": [],
@@ -1175,7 +1415,7 @@
           "expr": "rate(go_memstats_mallocs_total{instance=~\"$instance\"}[1m])",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "{{instance}}",
+          "legendFormat": "mallocs",
           "range": true,
           "refId": "A"
         }
@@ -1248,7 +1488,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 46
+        "y": 54
       },
       "id": 14,
       "links": [],
@@ -1275,7 +1515,7 @@
           "expr": "rate(go_memstats_alloc_bytes_total{instance=~\"$instance\"}[1m])",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "{{instance}}",
+          "legendFormat": "alloc_bytes",
           "range": true,
           "refId": "A"
         }
@@ -1349,7 +1589,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 46
+        "y": 54
       },
       "id": 15,
       "links": [],
@@ -1376,7 +1616,7 @@
           "expr": "go_goroutines{instance=~\"$instance\"}",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "{{instance}}",
+          "legendFormat": "goroutines",
           "range": true,
           "refId": "A"
         }
@@ -1449,7 +1689,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 54
+        "y": 62
       },
       "id": 16,
       "links": [],
@@ -1476,7 +1716,7 @@
           "expr": "go_gc_duration_seconds{instance=~\"$instance\", quantile=\"0.75\"}",
           "format": "time_series",
           "intervalFactor": 1,
-          "legendFormat": "{{instance}} {{quantile}}",
+          "legendFormat": "gc_duration {{quantile}}",
           "range": true,
           "refId": "A"
         }
@@ -1495,6 +1735,10 @@
           "selected": false,
           "text": "mj",
           "value": "mj"
+        },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "PBFA97CFB590B2093"
         },
         "definition": "label_values(bloom_du_config_info,instance)",
         "description": "",
@@ -1518,13 +1762,13 @@
     ]
   },
   "time": {
-    "from": "now-6h",
+    "from": "now-3h",
     "to": "now"
   },
   "timepicker": {},
   "timezone": "",
   "title": "bloom-du",
   "uid": "d1745947-1a56-4818-89fa-13c232c92b01",
-  "version": 11,
+  "version": 15,
   "weekStart": ""
 }

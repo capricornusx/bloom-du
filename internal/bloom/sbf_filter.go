@@ -26,6 +26,7 @@ type StableBloomFilter struct {
 	dumpFilepath   string
 	mux            sync.RWMutex
 	needCheckpoint bool // true if new element added. False if not AND last checkpoint success
+	isReady        bool
 }
 
 // CreateFilter creating and bootstrap SBF from struct file if exist OR loading text data as source
@@ -53,6 +54,20 @@ func (f *StableBloomFilter) TestAndAdd(value string) bool {
 	return result
 }
 
+func (f *StableBloomFilter) GetDumpSize() uint64 {
+	file, err := os.OpenFile(f.dumpFilepath, os.O_RDWR|os.O_CREATE, 0644)
+	if err != nil {
+		log.Panic().Err(err).Send()
+	}
+	defer file.Close()
+
+	stat, err := file.Stat()
+	if err != nil {
+		return 0
+	}
+	return uint64(stat.Size())
+}
+
 func (f *StableBloomFilter) Checkpoint() bool {
 	if !f.needCheckpoint {
 		log.Debug().Msg("Checkpoint is not necessary now.")
@@ -72,8 +87,17 @@ func (f *StableBloomFilter) Checkpoint() bool {
 		log.Error().Msg(fmt.Sprintf("Error to save Checkpoint: %v", err))
 		return false
 	}
+
 	f.needCheckpoint = false
 	return true
+}
+
+func (f *StableBloomFilter) IsReady() bool {
+	return f.isReady
+}
+
+func (f *StableBloomFilter) setIsReady(state bool) {
+	f.isReady = state
 }
 
 func (f *StableBloomFilter) loadStructFromFile() (int64, error) {
@@ -91,7 +115,7 @@ func (f *StableBloomFilter) loadStructFromFile() (int64, error) {
 	return numBytes, err
 }
 
-func (f *StableBloomFilter) checkF() bool {
+func (f *StableBloomFilter) isDumpExist() bool {
 	_, err := os.Stat(f.dumpFilepath)
 	if err != nil {
 		return os.IsExist(err)
@@ -100,7 +124,9 @@ func (f *StableBloomFilter) checkF() bool {
 }
 
 func (f *StableBloomFilter) Boostrap(sourceFile string) *StableBloomFilter {
-	if sourceFile == "" && !f.checkF() {
+	f.setIsReady(false)
+	defer f.setIsReady(true)
+	if sourceFile == "" && !f.isDumpExist() {
 		log.Info().Msg("Start empty filter")
 		return f
 	}
@@ -110,20 +136,19 @@ func (f *StableBloomFilter) Boostrap(sourceFile string) *StableBloomFilter {
 		f.bootstrap(sourceFile)
 	}
 
-	if sourceFile == "" && f.checkF() {
+	if sourceFile == "" && f.isDumpExist() {
 		log.Info().Msg(fmt.Sprintf("%s exist. Skip boostrap!", f.dumpFilepath))
 		_, err := f.loadStructFromFile()
 		if err != nil {
 			return f
 		}
 	}
-
 	return f
 }
 
 func (f *StableBloomFilter) PrintLogStat() {
 	// StablePoint returns the limit of the expected fraction of zeros in the Filter
-	log.Info().Msg(fmt.Sprintf("[P:%d] [K: %d] Cells: %s, Stable point: %f",
+	log.Debug().Msg(fmt.Sprintf("[P:%d] [K: %d] Cells: %s, Stable point: %f",
 		f.SBF.P(),
 		f.SBF.K(),
 		humanize.FormatInteger(integerFormat, int(f.SBF.Cells())),
