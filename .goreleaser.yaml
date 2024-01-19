@@ -45,7 +45,7 @@ builds:
         goarch: arm64
     main: .
 
-    ldflags: "-s -w -X 'internal/build/build.go={{.Version}}'"
+    ldflags: "-s -w -X 'internal/build/build.Version={{.Version}}'"
     binary: bloom-du
     env:
       # https://github.com/goreleaser/goreleaser/issues/225

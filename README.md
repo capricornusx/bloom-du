@@ -10,7 +10,7 @@
 После запустить 
  
 ```sh
-bloom-du --source values.txt
+bloom-du --source=values.txt
 ```
 
 Через некоторое время все строки будут загружены в фильтр. Далее исходный файл уже не нужен. 
@@ -60,6 +60,7 @@ curl -X GET --location "http://localhost:8515/metrics"
 1. Нечто похожее есть в Postgresql - но реализация кажется отличается. Требует исследования.
    - [BRIN индекс](https://postgrespro.ru/docs/postgresql/16/brin-builtin-opclasses)
    - [bloom](https://postgrespro.ru/docs/postgresql/15/bloom)
+   - [Bloom Indexes in PostgreSQL](https://www.percona.com/blog/bloom-indexes-in-postgresql/)
    - [Habr - Индексы в PostgreSQL 10](https://habr.com/ru/companies/postgrespro/articles/349224)
    - [Roaring Bitmaps and pgfaceting: Fast counting across large datasets in Postgres](https://pganalyze.com/blog/5mins-postgres-roaring-bitmaps-pgfaceting-query-performance)
    - [pgfaceting](https://github.com/cybertec-postgresql/pgfaceting)

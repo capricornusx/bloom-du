@@ -61,7 +61,8 @@ func main() {
 				Str("version", build.Version).
 				Str("runtime", runtime.Version()).
 				Int("pid", os.Getpid()).
-				Int("gomaxprocs", runtime.GOMAXPROCS(0)).Msg("starting bloom-du")
+				Int("gomaxprocs", runtime.GOMAXPROCS(0)).
+				Msg("starting")
 
 			ticker := time.NewTicker(time.Minute)
 			defer ticker.Stop()

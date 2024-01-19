@@ -148,11 +148,12 @@ func (f *StableBloomFilter) Boostrap(sourceFile string) *StableBloomFilter {
 
 func (f *StableBloomFilter) PrintLogStat() {
 	// StablePoint returns the limit of the expected fraction of zeros in the Filter
-	log.Debug().Msg(fmt.Sprintf("[P:%d] [K: %d] Cells: %s, Stable point: %f",
+	log.Debug().Msg(fmt.Sprintf("[P:%d] [K: %d] Cells: %s, Stable point: %f, FalsePositiveRate: %f",
 		f.SBF.P(),
 		f.SBF.K(),
 		humanize.FormatInteger(integerFormat, int(f.SBF.Cells())),
 		f.SBF.StablePoint(),
+		f.SBF.FalsePositiveRate(),
 	))
 }
 
