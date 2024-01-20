@@ -24,6 +24,7 @@ import (
 )
 
 func main() {
+	var force bool
 	var rootCmd = &cobra.Command{
 		Use:   "bloom-du",
 		Short: "bloom-du - Bloom Filter implementation",
@@ -31,11 +32,12 @@ func main() {
 		Run: func(cmd *cobra.Command, args []string) {
 
 			viper.SetDefault("source", "")
-			viper.SetDefault("port", "8515")
+			viper.SetDefault("port", 8515)
 			viper.SetDefault("address", "0.0.0.0")
 			viper.SetDefault("log_level", "info")
+			viper.SetDefault("force", false)
 
-			bindPFlags := []string{"source", "port", "address", "log_level"}
+			bindPFlags := []string{"source", "port", "address", "log_level", "force"}
 			for _, flag := range bindPFlags {
 				_ = viper.BindPFlag(flag, cmd.Flags().Lookup(flag))
 			}
@@ -82,7 +84,8 @@ func main() {
 	}
 
 	rootCmd.Flags().StringP("source", "s", "source.txt", "path to source data file")
-	rootCmd.Flags().StringP("port", "p", "8515", "port to serve on")
+	rootCmd.PersistentFlags().BoolVarP(&force, "force", "f", false, "Force load from source file, ignoring a dump")
+	rootCmd.Flags().Int("port", 8515, "port to serve on")
 	rootCmd.Flags().StringP("address", "a", "0.0.0.0", "interface to serve")
 	rootCmd.Flags().StringP("log_level", "", "info", "set the log level: trace, debug, info, error, fatal or none")
 
@@ -100,12 +103,24 @@ func main() {
 		Short: "check item in the Filter",
 		Long:  `check item in the Filter`,
 		Run: func(cmd *cobra.Command, args []string) {
-			fmt.Printf("Привет, здесь будет функция проверки")
+			fmt.Println("Привет, здесь будет функция проверки элемента в фильтре")
+		},
+	}
+
+	var filterCmd = &cobra.Command{
+		Use:   "filter",
+		Short: "Creating probability filter",
+		Long:  `Creating one of probability filter`,
+		Run: func(cmd *cobra.Command, args []string) {
+			// TODO нужен глобальный список фильтров, с общим доступом.
+			// ещё лучше иметь возможность загружать это всё из конфигурации
+			fmt.Println("Здесь будет функция создания выбранного фильтра")
 		},
 	}
 
 	rootCmd.AddCommand(serveCmd)
 	rootCmd.AddCommand(versionCmd)
+	rootCmd.AddCommand(filterCmd)
 	_ = rootCmd.Execute()
 }
 

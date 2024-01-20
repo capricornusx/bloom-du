@@ -43,13 +43,19 @@ curl -X GET --location "http://localhost:8515/metrics"
 
  - `bloom_du_config_info`
  - `bloom_du_elements_total`
- - `bloom_du_storage_query_duration_nanoseconds`
+ - `bloom_du_storage_query_duration_seconds`
 
 Кроме этого, есть стандартные метрики, которые отдаёт Go.
 
 Дашборд для Grafana - [grafana-bloom-du.json](internal%2Futils%2Fgrafana-bloom-du.json)
 
 
+### TODO
+ - [ ] Graceful upgrade - обновление самого бинарника и корректная обработка клиентов (старых и новых)
+ - [ ] Возможность создавать разные фильтры (название, настройки размера, fpRate ...)
+ - [ ] config.yml для удобного старта сервиса с разными фильтрами
+ - [ ] Валидация параметров для cli и api
+ - [ ] code coverage
 
 
 

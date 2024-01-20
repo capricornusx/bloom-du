@@ -26,15 +26,15 @@ func TestTestAddValue(t *testing.T) {
 		test := tt
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
-			Filter := boom.NewDefaultStableBloomFilter(M, fpRate)
+			filter := boom.NewDefaultStableBloomFilter(M, fpRate)
 
 			for i := 0; i < 50000; i++ {
 				value := fmt.Sprintf("test_%d", i)
-				Filter.Add([]byte(value))
+				filter.Add([]byte(value))
 			}
 
-			if err := Filter.Test(test.value); (!err) != test.wantErr {
-				t.Errorf("Filter.Test() error = %v, wantErr %v", err, test.wantErr)
+			if err := filter.Test(test.value); (!err) != test.wantErr {
+				t.Errorf("filter.Test() error = %v, wantErr %v", err, test.wantErr)
 			}
 		})
 	}
@@ -59,15 +59,15 @@ func TestTestAddValue2(t *testing.T) {
 		test := tt
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
-			Filter := CreateFilter("")
+			filter := CreateFilter("", false)
 
 			for i := 0; i < 50000; i++ {
 				value := fmt.Sprintf("test_%d", i)
-				Filter.Add(value)
+				filter.Add(value)
 			}
 
-			if err := Filter.Test(test.value); (!err) != test.wantErr {
-				t.Errorf("Filter.Test() error = %v, wantErr %v", err, test.wantErr)
+			if err := filter.Test(test.value); (!err) != test.wantErr {
+				t.Errorf("filter.Test() error = %v, wantErr %v", err, test.wantErr)
 			}
 		})
 	}

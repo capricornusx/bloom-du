@@ -30,11 +30,12 @@ type StableBloomFilter struct {
 }
 
 // CreateFilter creating and bootstrap SBF from struct file if exist OR loading text data as source
-func CreateFilter(sourceFile string) *StableBloomFilter {
+func CreateFilter(sourceFile string, force bool) *StableBloomFilter {
 	defaultSbf := boom.NewStableBloomFilter(M, 1, fpRate)
 
 	filter := StableBloomFilter{SBF: defaultSbf, dumpFilepath: dumpFileName}
-	return filter.Boostrap(sourceFile)
+	filter.Boostrap(sourceFile, force)
+	return &filter
 }
 
 func (f *StableBloomFilter) Add(value string) {
@@ -100,7 +101,7 @@ func (f *StableBloomFilter) setIsReady(state bool) {
 	f.isReady = state
 }
 
-func (f *StableBloomFilter) loadStructFromFile() (int64, error) {
+func (f *StableBloomFilter) loadFromDumpFile() (int64, error) {
 	f.mux.Lock()
 	defer f.mux.Unlock()
 	file, err := os.OpenFile(f.dumpFilepath, os.O_RDONLY, 0644)
@@ -123,27 +124,36 @@ func (f *StableBloomFilter) isDumpExist() bool {
 	return true
 }
 
-func (f *StableBloomFilter) Boostrap(sourceFile string) *StableBloomFilter {
+func (f *StableBloomFilter) Boostrap(sourceFile string, force bool) {
 	f.setIsReady(false)
 	defer f.setIsReady(true)
-	if sourceFile == "" && !f.isDumpExist() {
-		log.Info().Msg("Start empty filter")
-		return f
-	}
 
-	if sourceFile != "" {
-		log.Info().Msg(fmt.Sprintf("Load bootstrap data from %s!", sourceFile))
+	forceLoadFromSource := force && sourceFile != ""
+	defaultDumpLoad := !force && f.isDumpExist()
+	defaultSourceLoad := !force && sourceFile != "" && !f.isDumpExist()
+	emptyLoad := sourceFile == "" && !f.isDumpExist()
+
+	if forceLoadFromSource {
+		log.Info().Msg(fmt.Sprintf("Try force load data from: %s!", sourceFile))
 		f.bootstrap(sourceFile)
 	}
 
-	if sourceFile == "" && f.isDumpExist() {
-		log.Info().Msg(fmt.Sprintf("%s exist. Skip boostrap!", f.dumpFilepath))
-		_, err := f.loadStructFromFile()
+	if defaultDumpLoad {
+		log.Info().Msg(fmt.Sprintf("%s exist. Load ...", f.dumpFilepath))
+		_, err := f.loadFromDumpFile()
 		if err != nil {
-			return f
+			log.Error().Msg(fmt.Sprintf("Error load from dump file: %s", f.dumpFilepath))
 		}
 	}
-	return f
+
+	if defaultSourceLoad {
+		log.Info().Msg(fmt.Sprintf("Try load data from: %s", sourceFile))
+		f.bootstrap(sourceFile)
+	}
+
+	if emptyLoad {
+		log.Info().Msg("Start empty filter")
+	}
 }
 
 func (f *StableBloomFilter) PrintLogStat() {
@@ -163,7 +173,8 @@ func (f *StableBloomFilter) bootstrap(filename string) {
 
 	file, err := os.Open(filename)
 	if err != nil {
-		log.Panic().Err(err).Send()
+		log.Error().Msg(fmt.Sprintf("Load from file err: %v", err))
+		return
 	}
 	defer file.Close()
 
@@ -179,7 +190,7 @@ func (f *StableBloomFilter) bootstrap(filename string) {
 	}
 
 	if err = scanner.Err(); err != nil {
-		log.Panic().Err(err).Send()
+		log.Error().Msg(fmt.Sprintf("Load from file err: %v", err))
 	}
 
 	f.needCheckpoint = true
@@ -190,4 +201,13 @@ func (f *StableBloomFilter) bootstrap(filename string) {
 // printCounter P returns the number of cells decremented on every add.
 func (f *StableBloomFilter) printCounter(counter int) {
 	log.Info().Msg(fmt.Sprintf("Добавлено: %s", humanize.FormatInteger(integerFormat, counter)))
+}
+
+func (f *StableBloomFilter) Engine() ProbabilisticEngine {
+	return StableBloom
+}
+
+func (f *StableBloomFilter) Drop() error {
+	log.Info().Msg("Drop() not implemented")
+	return nil
 }

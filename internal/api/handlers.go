@@ -20,19 +20,29 @@ const (
 	ContentType     = "Content-Type"
 	ContentTypeJSON = "application/json; charset=utf-8"
 	MsgJSONError    = "JSON encode error"
-	valueMinLen     = 5
+	valueMinLen     = 2
 )
 
 var Filter *bloom.StableBloomFilter
 
-type Response struct {
+type RequestData struct {
+	Value   string `json:"value"`
+	Options string `json:"options"`
+}
+
+type RequestBulkData struct {
+	Data []string `json:"data"`
+}
+
+type ResponseData struct {
 	Message string `json:"message"`
 	Status  int    `json:"status"`
 }
 
 func Start() {
 	sourceFile := viper.GetString("source")
-	Filter = bloom.CreateFilter(sourceFile)
+	force := viper.GetBool("force")
+	Filter = bloom.CreateFilter(sourceFile, force)
 
 	FilterProperty.WithLabelValues("cells").Set(float64(Filter.SBF.Cells()))
 	CurrentConfig.WithLabelValues(
@@ -62,9 +72,19 @@ func checkIsReady(w http.ResponseWriter) error {
 	return nil
 }
 
+func decodeInputJSON(w http.ResponseWriter, r *http.Request) RequestData {
+	var data RequestData
+	err := json.NewDecoder(r.Body).Decode(&data)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+	}
+	return data
+}
+
 func handleCheck(w http.ResponseWriter, r *http.Request) {
 	start := time.Now()
-	value := r.URL.Query().Get("value")
+
+	value := decodeInputJSON(w, r).Value
 
 	err := queryValidate(w, value)
 	if err != nil {
@@ -83,7 +103,7 @@ func handleCheck(w http.ResponseWriter, r *http.Request) {
 		status = http.StatusOK
 	}
 
-	elapsed := utils.StopWatchLog(start, "Время поиска")
+	elapsed := utils.StopWatchLog(start, " ✅ Время поиска")
 	QueryDuration.WithLabelValues("check").Observe(elapsed)
 
 	httpRespond(w, status, msg)
@@ -91,7 +111,8 @@ func handleCheck(w http.ResponseWriter, r *http.Request) {
 
 func handleAdd(w http.ResponseWriter, r *http.Request) {
 	start := time.Now()
-	value := r.URL.Query().Get("value")
+
+	value := decodeInputJSON(w, r).Value
 
 	err := queryValidate(w, value)
 	if err != nil {
@@ -115,7 +136,45 @@ func handleAdd(w http.ResponseWriter, r *http.Request) {
 	} else {
 		elapsed := utils.StopWatchLog(start, "✅ Время поиска")
 		QueryDuration.WithLabelValues("add_false_test").Observe(elapsed)
-		notModified(w)
+		httpNotModified(w)
+	}
+}
+
+func handleBulkLoad(w http.ResponseWriter, r *http.Request) {
+	start := time.Now()
+
+	err := checkIsReady(w)
+	if err != nil {
+		return
+	}
+
+	var bulk RequestBulkData
+	err = json.NewDecoder(r.Body).Decode(&bulk)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+	}
+
+	added := 0
+	for _, entity := range bulk.Data {
+		if !Filter.TestAndAdd(entity) {
+			added++
+		}
+	}
+	elapsed := utils.StopWatchLog(start, "✅ [bulk] Время поиска + добавления")
+	QueryDuration.WithLabelValues("add_bulk").Observe(elapsed)
+	FilterProperty.WithLabelValues("stable_point").Set(Filter.SBF.StablePoint())
+	FilterProperty.WithLabelValues("cells").Set(float64(Filter.SBF.Cells()))
+	FilterProperty.WithLabelValues("fpr").Set(Filter.SBF.FalsePositiveRate())
+	Filter.PrintLogStat()
+
+	skipped := len(bulk.Data) - added
+	msg := fmt.Sprintf("✅ [bulk] Добавлено: %d, пропущено: %d", added, skipped)
+	log.Debug().Msg(msg)
+
+	if added == 0 {
+		httpNotModified(w)
+	} else {
+		httpRespond(w, http.StatusCreated, msg)
 	}
 }
 
@@ -126,8 +185,8 @@ func handleCheckpoint(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func queryValidate(w http.ResponseWriter, query string) error {
-	if len(query) <= valueMinLen {
+func queryValidate(w http.ResponseWriter, value string) error {
+	if len(value) <= valueMinLen {
 		httpRespond(w, http.StatusBadRequest, fmt.Sprintf("value lenght must be >= %d", valueMinLen))
 		return errors.New("FAIL")
 	}
@@ -138,7 +197,7 @@ func httpRespond(w http.ResponseWriter, statusCode int, value string) {
 	w.Header().Set(ContentType, ContentTypeJSON)
 	w.WriteHeader(statusCode)
 
-	jsonResp := Response{
+	jsonResp := ResponseData{
 		Message: value,
 		Status:  statusCode,
 	}
@@ -148,7 +207,8 @@ func httpRespond(w http.ResponseWriter, statusCode int, value string) {
 	}
 }
 
-func notModified(w http.ResponseWriter) {
+func httpNotModified(w http.ResponseWriter) {
+	w.Header().Set(ContentType, ContentTypeJSON)
 	w.WriteHeader(http.StatusNotModified)
-	_, _ = w.Write([]byte("ok"))
+	_, _ = w.Write([]byte(""))
 }

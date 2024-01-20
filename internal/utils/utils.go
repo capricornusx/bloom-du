@@ -9,7 +9,7 @@ import (
 
 // StopWatchLog todo поискать готовую либу
 func StopWatchLog(start time.Time, text string) float64 {
-	elapsed := time.Since(start)
-	log.Debug().Msg(fmt.Sprintf("%s [%s]", text, elapsed))
-	return float64(elapsed)
+	elapsed := time.Since(start).Seconds()
+	log.Debug().Msg(fmt.Sprintf("%s [%f]", text, elapsed))
+	return elapsed
 }

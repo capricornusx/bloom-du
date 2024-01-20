@@ -1,13 +1,36 @@
 ### Check value
-GET http://localhost:8515/api/check?value=1234334
+POST http://localhost:8515/api/check
 Accept: application/json
 Content-Type: application/json
+
+{
+  "value": "1234567"
+}
 
 ### Add value
-POST http://localhost:8515/api/add?value=999111001x1
+POST http://localhost:8515/api/add
 Accept: application/json
 Content-Type: application/json
 
+{
+  "value": "999111001x1"
+}
+
+### Add value (Bulk)
+POST http://localhost:8515/api/bulk
+Accept: application/json
+Content-Type: application/json
+
+{
+  "data": [
+    "999111001x1",
+    "999111001x2",
+    "999111001x3",
+    "999111001x4",
+    "999111001x5",
+    "999111001x1"
+  ]
+}
 
 ### Get Prometheus metrics
 GET http://localhost:8515/metrics

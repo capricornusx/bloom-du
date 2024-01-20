@@ -23,6 +23,7 @@ const (
 var apiHandlersFunc = map[string]http.HandlerFunc{
 	"/api/check":      handleCheck,
 	"/api/add":        handleAdd,
+	"/api/bulk":       handleBulkLoad,
 	"/api/checkpoint": handleCheckpoint,
 	"/health":         healthHandler,
 }
@@ -52,13 +53,14 @@ var (
 			Help:      "filter properties",
 		}, labelNames,
 	)
-	QueryDuration = prometheus.NewSummaryVec(prometheus.SummaryOpts{
-		Namespace:  metricsNamespace,
-		Subsystem:  "storage",
-		Name:       "query_duration_nanoseconds",
-		Help:       "A Summary of successful query durations in nanoseconds.",
-		Objectives: map[float64]float64{0.5: 0.05, 0.9: 0.01, 0.99: 0.001},
-	}, labelNames)
+	QueryDuration = prometheus.NewSummaryVec(
+		prometheus.SummaryOpts{
+			Namespace:  metricsNamespace,
+			Subsystem:  "storage",
+			Name:       "query_duration_seconds",
+			Help:       "A Summary of successful query durations in seconds.",
+			Objectives: map[float64]float64{0.5: 0.05, 0.9: 0.01, 0.99: 0.001},
+		}, labelNames)
 )
 
 // initMetrics Prometheus metrics
