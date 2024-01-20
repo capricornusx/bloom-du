@@ -1,7 +1,6 @@
 package bloom
 
 import (
-	"errors"
 	"fmt"
 )
 
@@ -11,8 +10,6 @@ const (
 	CountingBloom
 	CuckooBloom
 )
-
-var NotImplementedError = errors.New("function not implemented")
 
 type ProbabilisticEngine uint8
 

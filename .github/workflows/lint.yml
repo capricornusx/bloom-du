@@ -1,7 +1,10 @@
 name: lint
 on:
   push:
-  pull_request:
+    tags-ignore:
+      - '**'
+    branches:
+      - '**'
 
 permissions:
   contents: read
