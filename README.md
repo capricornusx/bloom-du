@@ -43,7 +43,7 @@ curl -X GET --location "http://localhost:8515/metrics"
 
  - `bloom_du_config_info`
  - `bloom_du_elements_total`
- - `bloom_du_storage_query_duration_seconds`
+ - `bloom_du_api_http_request_duration_seconds`
 
 Кроме этого, есть стандартные метрики, которые отдаёт Go.
 

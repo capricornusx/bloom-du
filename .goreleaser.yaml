@@ -55,7 +55,7 @@ archives:
     name_template: '{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}'
     format: tar.gz
     files:
-      - LICENSE*
+      # - LICENSE*
       - README*
       - CHANGELOG*
     format_overrides:
