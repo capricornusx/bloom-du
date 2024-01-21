@@ -57,7 +57,7 @@ func (f *StableBloomFilter) TestAndAdd(value string) bool {
 	result := f.SBF.TestAndAdd([]byte(value))
 	if !result {
 		f.needCheckpoint = true
-		f.LogCh <- utils.LogEvent{Level: zerolog.DebugLevel, Name: "add"}
+		f.LogCh <- utils.LogEvent{Level: zerolog.DebugLevel, Name: "add", Count: 1.0}
 	}
 
 	return !result
