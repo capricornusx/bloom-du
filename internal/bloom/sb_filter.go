@@ -6,8 +6,9 @@ import (
 	"os"
 	"sync"
 
-	"github.com/dustin/go-humanize"
 	boom "github.com/tylertreat/BoomFilters"
+
+	"bloom-du/internal/utils"
 )
 
 type BFilter struct {
@@ -142,5 +143,5 @@ func (f *BFilter) bootstrap(filename string) {
 
 // printCounter P returns the number of cells decremented on every add.
 func (f *BFilter) printCounter(counter int) {
-	log.Printf("Добавлено: %s\n", humanize.FormatInteger(integerFormat, counter))
+	log.Printf("Добавлено: %s\n", utils.HumInt(counter))
 }

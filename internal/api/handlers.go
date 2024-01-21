@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/dustin/go-humanize"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/viper"
 
@@ -21,6 +20,11 @@ const (
 	ContentTypeJSON = "application/json; charset=utf-8"
 	MsgJSONError    = "JSON encode error"
 	valueMinLen     = 2
+)
+
+const (
+	searchMsg    = "✅ Время поиска"
+	searchAddMsg = "✅ Время поиска + добавления"
 )
 
 var Filter *bloom.StableBloomFilter
@@ -40,11 +44,13 @@ type ResponseData struct {
 }
 
 func Start() {
+	logCh := make(chan utils.LogEvent, 10)
+	go handleLogs(logCh)
+
 	sourceFile := viper.GetString("source")
 	force := viper.GetBool("force")
-	Filter = bloom.CreateFilter(sourceFile, force)
+	Filter = bloom.NewStableBloomFilter(sourceFile, force, logCh)
 
-	FilterProperty.WithLabelValues("cells").Set(float64(Filter.SBF.Cells()))
 	CurrentConfig.WithLabelValues(
 		fmt.Sprintf("%d", Filter.SBF.Cells()),
 		fmt.Sprintf("%d", Filter.SBF.K()),
@@ -54,11 +60,29 @@ func Start() {
 	).Set(1)
 }
 
+// Эксперименты с каналами
+func handleLogs(logCh chan utils.LogEvent) {
+	for msg := range logCh {
+		switch msg.Name {
+		case "bootstrap":
+			if msg.Count != 0 {
+				Elements.WithLabelValues("add_after_test").Add(msg.Count)
+			}
+			log.WithLevel(msg.Level).Msg(fmt.Sprintf("[Bootstrap] %s", msg.Msg))
+		case "api":
+			log.WithLevel(msg.Level).Msg(fmt.Sprintf("[API] %s", msg.Msg))
+		case "add":
+			Elements.WithLabelValues("add_after_test").Add(msg.Count)
+		default:
+			log.WithLevel(msg.Level).Msg(fmt.Sprintf("[%s]%s", msg.Name, msg.Msg))
+		}
+	}
+}
+
 func Checkpoint() {
 	start := time.Now()
 	if Filter.Checkpoint() {
-		elapsed := utils.StopWatchLog(start, "Checkpoint done: "+humanize.Bytes(Filter.GetDumpSize()))
-		QueryDuration.WithLabelValues("Checkpoint").Observe(elapsed)
+		utils.StopWatchLog(Filter.LogCh, start, "📍 Checkpoint done "+utils.HumByte(Filter.GetDumpSize()))
 	}
 }
 
@@ -103,8 +127,7 @@ func handleCheck(w http.ResponseWriter, r *http.Request) {
 		status = http.StatusOK
 	}
 
-	elapsed := utils.StopWatchLog(start, " ✅ Время поиска")
-	QueryDuration.WithLabelValues("check").Observe(elapsed)
+	utils.StopWatchLog(Filter.LogCh, start, searchMsg)
 
 	httpRespond(w, status, msg)
 }
@@ -124,18 +147,11 @@ func handleAdd(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !Filter.TestAndAdd(value) {
-		elapsed := utils.StopWatchLog(start, "✅ Время поиска + добавления")
-		QueryDuration.WithLabelValues("add_after_test").Observe(elapsed)
-		Elements.WithLabelValues("add_after_test").Inc()
-		FilterProperty.WithLabelValues("stable_point").Set(Filter.SBF.StablePoint())
-		FilterProperty.WithLabelValues("cells").Set(float64(Filter.SBF.Cells()))
-		FilterProperty.WithLabelValues("fpr").Set(Filter.SBF.FalsePositiveRate())
-		Filter.PrintLogStat()
+	if Filter.TestAndAdd(value) {
+		utils.StopWatchLog(Filter.LogCh, start, searchAddMsg)
 		httpRespond(w, http.StatusCreated, "✅ Добавлено!")
 	} else {
-		elapsed := utils.StopWatchLog(start, "✅ Время поиска")
-		QueryDuration.WithLabelValues("add_false_test").Observe(elapsed)
+		utils.StopWatchLog(Filter.LogCh, start, searchMsg)
 		httpNotModified(w)
 	}
 }
@@ -156,20 +172,13 @@ func handleBulkLoad(w http.ResponseWriter, r *http.Request) {
 
 	added := 0
 	for _, entity := range bulk.Data {
-		if !Filter.TestAndAdd(entity) {
+		if Filter.TestAndAdd(entity) {
 			added++
 		}
 	}
-	elapsed := utils.StopWatchLog(start, "✅ [bulk] Время поиска + добавления")
-	QueryDuration.WithLabelValues("add_bulk").Observe(elapsed)
-	FilterProperty.WithLabelValues("stable_point").Set(Filter.SBF.StablePoint())
-	FilterProperty.WithLabelValues("cells").Set(float64(Filter.SBF.Cells()))
-	FilterProperty.WithLabelValues("fpr").Set(Filter.SBF.FalsePositiveRate())
-	Filter.PrintLogStat()
-
 	skipped := len(bulk.Data) - added
-	msg := fmt.Sprintf("✅ [bulk] Добавлено: %d, пропущено: %d", added, skipped)
-	log.Debug().Msg(msg)
+	msg := fmt.Sprintf("[bulk] ✅ Добавлено: %d, Пропущено: %d", added, skipped)
+	utils.StopWatchLog(Filter.LogCh, start, msg)
 
 	if added == 0 {
 		httpNotModified(w)
@@ -193,22 +202,20 @@ func queryValidate(w http.ResponseWriter, value string) error {
 	return nil
 }
 
-func httpRespond(w http.ResponseWriter, statusCode int, value string) {
+func httpRespond(w http.ResponseWriter, statusCode int, msg string) {
 	w.Header().Set(ContentType, ContentTypeJSON)
 	w.WriteHeader(statusCode)
 
-	jsonResp := ResponseData{
-		Message: value,
+	jsonResponse := ResponseData{
+		Message: msg,
 		Status:  statusCode,
 	}
 
-	if err := json.NewEncoder(w).Encode(jsonResp); err != nil {
-		log.Printf("%s %v", MsgJSONError, err)
+	if err := json.NewEncoder(w).Encode(&jsonResponse); err != nil {
+		log.Printf("%s: %v", MsgJSONError, err)
 	}
 }
 
 func httpNotModified(w http.ResponseWriter) {
-	w.Header().Set(ContentType, ContentTypeJSON)
 	w.WriteHeader(http.StatusNotModified)
-	_, _ = w.Write([]byte(""))
 }

@@ -25,6 +25,7 @@ import (
 
 func main() {
 	var force bool
+	var checkpointInterval time.Duration
 	var rootCmd = &cobra.Command{
 		Use:   "bloom-du",
 		Short: "bloom-du - Bloom Filter implementation",
@@ -36,8 +37,12 @@ func main() {
 			viper.SetDefault("address", "0.0.0.0")
 			viper.SetDefault("log_level", "info")
 			viper.SetDefault("force", false)
+			viper.SetDefault("checkpoint_interval", 600*time.Second)
 
-			bindPFlags := []string{"source", "port", "address", "log_level", "force"}
+			bindPFlags := []string{
+				"source", "port", "address", "log_level", "force",
+				"checkpoint_interval",
+			}
 			for _, flag := range bindPFlags {
 				_ = viper.BindPFlag(flag, cmd.Flags().Lookup(flag))
 			}
@@ -50,10 +55,10 @@ func main() {
 			httpServer, err := api.RunHTTPServers()
 			if err != nil {
 				log.Fatal().Msgf("error running HTTP server: %v", err)
+				os.Exit(1)
 			} else {
 				log.Info().Msgf("listen and serve on: %s", httpServer.Addr)
 			}
-
 			infoCh := make(chan os.Signal, 1)
 			go handleSignals(infoCh, httpServer)
 
@@ -64,9 +69,10 @@ func main() {
 				Str("runtime", runtime.Version()).
 				Int("pid", os.Getpid()).
 				Int("gomaxprocs", runtime.GOMAXPROCS(0)).
+				Str("log_level", viper.GetString("log_level")).
 				Msg("starting")
 
-			ticker := time.NewTicker(time.Minute)
+			ticker := time.NewTicker(checkpointInterval)
 			defer ticker.Stop()
 
 			for {
@@ -84,10 +90,11 @@ func main() {
 	}
 
 	rootCmd.Flags().StringP("source", "s", "source.txt", "path to source data file")
-	rootCmd.PersistentFlags().BoolVarP(&force, "force", "f", false, "Force load from source file, ignoring a dump")
+	rootCmd.Flags().StringP("address", "a", "0.0.0.0", "address to serve")
 	rootCmd.Flags().Int("port", 8515, "port to serve on")
-	rootCmd.Flags().StringP("address", "a", "0.0.0.0", "interface to serve")
-	rootCmd.Flags().StringP("log_level", "", "info", "set the log level: trace, debug, info, error, fatal or none")
+	rootCmd.Flags().StringP("log_level", "", "info", "log level: trace, debug, info, error, fatal or none")
+	rootCmd.PersistentFlags().BoolVarP(&force, "force", "f", false, "force load from source file, ignoring a dump")
+	rootCmd.PersistentFlags().DurationVarP(&checkpointInterval, "checkpoint_interval", "i", 600*time.Second, "checkpoint")
 
 	var versionCmd = &cobra.Command{
 		Use:   "version",

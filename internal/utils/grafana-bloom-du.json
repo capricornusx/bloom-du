@@ -63,7 +63,7 @@
       },
       "gridPos": {
         "h": 4,
-        "w": 4,
+        "w": 3,
         "x": 0,
         "y": 1
       },
@@ -91,6 +91,7 @@
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
+          "editorMode": "code",
           "exemplar": false,
           "expr": "max(time() - process_start_time_seconds{instance=~\"$instance\"})",
           "instant": true,
@@ -109,9 +110,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
+          "fieldMinMax": false,
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
@@ -119,65 +118,24 @@
               {
                 "color": "blue",
                 "value": null
+              },
+              {
+                "color": "blue",
+                "value": 80
               }
             ]
           },
-          "unit": "short"
+          "unit": "none"
         },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "fpr"
-            },
-            "properties": [
-              {
-                "id": "unit",
-                "value": "none"
-              },
-              {
-                "id": "decimals",
-                "value": 9
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "cells"
-            },
-            "properties": [
-              {
-                "id": "unit",
-                "value": "short"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "stable_point"
-            },
-            "properties": [
-              {
-                "id": "unit",
-                "value": "none"
-              },
-              {
-                "id": "decimals",
-                "value": 6
-              }
-            ]
-          }
-        ]
+        "overrides": []
       },
       "gridPos": {
         "h": 4,
-        "w": 7,
-        "x": 4,
+        "w": 4,
+        "x": 3,
         "y": 1
       },
-      "id": 3,
+      "id": 20,
       "options": {
         "colorMode": "value",
         "graphMode": "none",
@@ -185,11 +143,12 @@
         "orientation": "auto",
         "reduceOptions": {
           "calcs": [
-            "lastNotNull"
+            "mean"
           ],
           "fields": "",
           "values": false
         },
+        "text": {},
         "textMode": "auto",
         "wideLayout": true
       },
@@ -202,14 +161,14 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "sum(bloom_du_filter_properties) by (type)",
-          "instant": false,
-          "legendFormat": "__auto",
-          "range": true,
+          "expr": "bloom_du_elements_total",
+          "instant": true,
+          "interval": "",
+          "legendFormat": "elements added",
           "refId": "A"
         }
       ],
-      "title": "Filter State",
+      "title": "Total Elements",
       "type": "stat"
     },
     {
@@ -284,7 +243,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "bloom_du_config_info",
+          "expr": "bloom_du_config_info{instance=\"$instance\"}",
           "format": "table",
           "instant": true,
           "legendFormat": "p - (the number of cells decremented on every add)",
@@ -303,7 +262,8 @@
                 "cells",
                 "fpRate",
                 "instance",
-                "k"
+                "k",
+                "stablePoint"
               ]
             }
           }
@@ -342,8 +302,7 @@
             "lineWidth": 1,
             "pointSize": 5,
             "scaleDistribution": {
-              "log": 2,
-              "type": "log"
+              "type": "linear"
             },
             "showPoints": "auto",
             "spanNulls": false,
@@ -369,7 +328,7 @@
               }
             ]
           },
-          "unit": "s"
+          "unit": "short"
         },
         "overrides": []
       },
@@ -378,107 +337,6 @@
         "w": 24,
         "x": 0,
         "y": 5
-      },
-      "id": 2,
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "table",
-          "placement": "right",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc"
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
-          },
-          "editorMode": "code",
-          "exemplar": false,
-          "expr": "quantile(0.9, bloom_du_storage_query_duration_seconds{type!=\"Checkpoint\"}) by (type)",
-          "hide": false,
-          "instant": false,
-          "interval": "",
-          "legendFormat": "{{instance}}",
-          "range": true,
-          "refId": "C"
-        }
-      ],
-      "title": "Query duration 0.9",
-      "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "PBFA97CFB590B2093"
-      },
-      "description": "",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "drawStyle": "line",
-            "fillOpacity": 0,
-            "gradientMode": "none",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "insertNulls": false,
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "log": 2,
-              "type": "log"
-            },
-            "showPoints": "auto",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "none"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          },
-          "unit": "s"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 24,
-        "x": 0,
-        "y": 13
       },
       "id": 5,
       "options": {
@@ -500,18 +358,100 @@
             "uid": "PBFA97CFB590B2093"
           },
           "editorMode": "code",
-          "exemplar": false,
-          "expr": "quantile(0.9, bloom_du_storage_query_duration_seconds{type=\"Checkpoint\"})",
+          "expr": "sum(rate(bloom_du_api_http_request_duration_seconds_count{instance=\"$instance\"}[5m])) by (path)",
           "hide": false,
           "instant": false,
-          "interval": "",
-          "legendFormat": "Checkpoint",
+          "legendFormat": "__auto",
           "range": true,
-          "refId": "C"
+          "refId": "A"
         }
       ],
-      "title": "Checkpoint duration 0.9",
+      "title": "Rate requests",
       "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PBFA97CFB590B2093"
+      },
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 13
+      },
+      "id": 21,
+      "options": {
+        "displayMode": "basic",
+        "maxVizHeight": 300,
+        "minVizHeight": 75,
+        "minVizWidth": 75,
+        "namePlacement": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showUnfilled": true,
+        "sizing": "auto",
+        "valueMode": "color"
+      },
+      "pluginVersion": "10.2.3",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
+          "editorMode": "code",
+          "exemplar": true,
+          "expr": "histogram_quantile(0.9, sum(rate(bloom_du_api_http_request_hist_duration_seconds_bucket{instance=\"$instance\"}[5m])) by (le,path))",
+          "format": "heatmap",
+          "hide": true,
+          "instant": false,
+          "legendFormat": "__auto",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
+          "editorMode": "code",
+          "expr": "bloom_du_api_http_request_hist_duration_seconds_bucket{instance=\"$instance\", path=\"/api/check\"}",
+          "hide": false,
+          "instant": false,
+          "legendFormat": "{{le}}",
+          "range": true,
+          "refId": "B"
+        }
+      ],
+      "title": "histogram",
+      "type": "bargauge"
     },
     {
       "datasource": {
@@ -555,7 +495,6 @@
               "mode": "off"
             }
           },
-          "decimals": 9,
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
@@ -563,14 +502,10 @@
               {
                 "color": "green",
                 "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
               }
             ]
           },
-          "unit": "none"
+          "unit": "short"
         },
         "overrides": []
       },
@@ -580,7 +515,7 @@
         "x": 0,
         "y": 21
       },
-      "id": 17,
+      "id": 23,
       "options": {
         "legend": {
           "calcs": [],
@@ -600,14 +535,15 @@
             "uid": "PBFA97CFB590B2093"
           },
           "editorMode": "code",
-          "expr": "bloom_du_filter_properties{type=\"fpr\"}",
+          "exemplar": false,
+          "expr": "rate(bloom_du_api_http_response_codes_total{instance=\"$instance\"}[5m])",
           "instant": false,
-          "legendFormat": "FPR",
+          "legendFormat": "{{code}}",
           "range": true,
           "refId": "A"
         }
       ],
-      "title": "False Positive Rate",
+      "title": "HTTP Codes Rate",
       "type": "timeseries"
     },
     {
@@ -659,14 +595,10 @@
               {
                 "color": "green",
                 "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
               }
             ]
           },
-          "unit": "none"
+          "unit": "short"
         },
         "overrides": []
       },
@@ -697,14 +629,14 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "bloom_du_filter_properties{type=\"stable_point\"}",
+          "expr": "bloom_du_elements_total{instance=\"$instance\"}",
           "instant": false,
-          "legendFormat": "stable_point",
+          "legendFormat": "elements",
           "range": true,
           "refId": "A"
         }
       ],
-      "title": "stable_point",
+      "title": "Total Elements",
       "type": "timeseries"
     },
     {
@@ -1799,7 +1731,7 @@
     "list": [
       {
         "current": {
-          "selected": false,
+          "selected": true,
           "text": "mj",
           "value": "mj"
         },
@@ -1836,6 +1768,6 @@
   "timezone": "",
   "title": "bloom-du",
   "uid": "d1745947-1a56-4818-89fa-13c232c92b01",
-  "version": 16,
+  "version": 21,
   "weekStart": ""
 }

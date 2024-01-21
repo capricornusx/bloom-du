@@ -2,6 +2,8 @@ package bloom
 
 import (
 	"fmt"
+
+	"bloom-du/internal/utils"
 )
 
 const (
@@ -22,10 +24,10 @@ type Filter interface {
 
 // MakeEngine TODO попробовать реализовать это через Cobra, а уже потом через API
 func MakeEngine(name string) (Filter, error) {
-	file := "x"
 	switch name {
 	case "postgres":
-		return CreateFilter(file, false), nil
+		logCh := make(chan utils.LogEvent, 5)
+		return NewStableBloomFilter("", false, logCh), nil
 
 	default:
 		return nil, fmt.Errorf("unknown stucture type: `%s`", name)

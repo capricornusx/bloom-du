@@ -2,13 +2,17 @@ package bloom
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
+	"io"
 	"os"
 	"sync"
 
-	"github.com/dustin/go-humanize"
+	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	boom "github.com/tylertreat/BoomFilters"
+
+	"bloom-du/internal/utils"
 )
 
 const (
@@ -18,7 +22,7 @@ const (
 	// fpRate The desired rate of false positives.
 	fpRate        = 0.0001
 	dumpFileName  = "sbfData.bloom"
-	integerFormat = "#,###."
+	bootstrapName = "bootstrap"
 )
 
 type StableBloomFilter struct {
@@ -27,14 +31,16 @@ type StableBloomFilter struct {
 	mux            sync.RWMutex
 	needCheckpoint bool // true if new element added. False if not AND last checkpoint success
 	isReady        bool
+	LogCh          chan utils.LogEvent
 }
 
-// CreateFilter creating and bootstrap SBF from struct file if exist OR loading text data as source
-func CreateFilter(sourceFile string, force bool) *StableBloomFilter {
+// NewStableBloomFilter creating and bootstrap SBF from struct file if exist OR loading text data as source
+func NewStableBloomFilter(sourceFile string, force bool, logCh chan utils.LogEvent) *StableBloomFilter {
 	defaultSbf := boom.NewStableBloomFilter(M, 1, fpRate)
 
-	filter := StableBloomFilter{SBF: defaultSbf, dumpFilepath: dumpFileName}
+	filter := StableBloomFilter{SBF: defaultSbf, dumpFilepath: dumpFileName, LogCh: logCh}
 	filter.Boostrap(sourceFile, force)
+	filter.printLogStat()
 	return &filter
 }
 
@@ -51,14 +57,16 @@ func (f *StableBloomFilter) TestAndAdd(value string) bool {
 	result := f.SBF.TestAndAdd([]byte(value))
 	if !result {
 		f.needCheckpoint = true
+		f.LogCh <- utils.LogEvent{Level: zerolog.DebugLevel, Name: "add"}
 	}
-	return result
+
+	return !result
 }
 
 func (f *StableBloomFilter) GetDumpSize() uint64 {
 	file, err := os.OpenFile(f.dumpFilepath, os.O_RDWR|os.O_CREATE, 0644)
 	if err != nil {
-		log.Panic().Err(err).Send()
+		log.Error().Err(err).Send()
 	}
 	defer file.Close()
 
@@ -71,7 +79,7 @@ func (f *StableBloomFilter) GetDumpSize() uint64 {
 
 func (f *StableBloomFilter) Checkpoint() bool {
 	if !f.needCheckpoint {
-		log.Debug().Msg("Checkpoint is not necessary now.")
+		f.LogCh <- utils.LogEvent{Level: zerolog.DebugLevel, Name: "checkpoint", Msg: "Checkpoint is not necessary now."}
 		return false
 	}
 
@@ -85,7 +93,11 @@ func (f *StableBloomFilter) Checkpoint() bool {
 	defer f.mux.Unlock()
 	_, err = f.SBF.WriteTo(file)
 	if err != nil {
-		log.Error().Msg(fmt.Sprintf("Error to save Checkpoint: %v", err))
+		f.LogCh <- utils.LogEvent{
+			Level: zerolog.ErrorLevel,
+			Name:  "checkpoint",
+			Msg:   fmt.Sprintf("Error to save Checkpoint: %v", err),
+		}
 		return false
 	}
 
@@ -95,6 +107,63 @@ func (f *StableBloomFilter) Checkpoint() bool {
 
 func (f *StableBloomFilter) IsReady() bool {
 	return f.isReady
+}
+
+func (f *StableBloomFilter) Boostrap(sourceFile string, force bool) {
+	f.setIsReady(false)
+	defer f.setIsReady(true)
+
+	forceLoadFromSource := force && sourceFile != ""
+	defaultDumpLoad := !force && f.isDumpExist()
+	defaultSourceLoad := !force && sourceFile != "" && !f.isDumpExist()
+	emptyLoad := sourceFile == "" && !f.isDumpExist()
+
+	if forceLoadFromSource {
+		f.LogCh <- utils.LogEvent{
+			Level: zerolog.DebugLevel,
+			Name:  bootstrapName,
+			Msg:   fmt.Sprintf("Try force load data from: %s!", sourceFile),
+		}
+		f.bootstrap(sourceFile)
+	}
+
+	if defaultDumpLoad {
+		f.LogCh <- utils.LogEvent{
+			Level: zerolog.InfoLevel,
+			Name:  bootstrapName,
+			Msg:   fmt.Sprintf("%s exist. Load ...", f.dumpFilepath),
+		}
+		_, err := f.loadFromDumpFile()
+		if err != nil {
+			log.Error().Msg(fmt.Sprintf("Error load from dump file: %s", f.dumpFilepath))
+		}
+	}
+
+	if defaultSourceLoad {
+		f.LogCh <- utils.LogEvent{
+			Level: zerolog.InfoLevel,
+			Name:  bootstrapName,
+			Msg:   fmt.Sprintf("Try load data from: %s", sourceFile),
+		}
+		f.bootstrap(sourceFile)
+	}
+
+	if emptyLoad {
+		f.LogCh <- utils.LogEvent{
+			Level: zerolog.InfoLevel,
+			Name:  bootstrapName,
+			Msg:   "Start empty filter",
+		}
+	}
+}
+
+func (f *StableBloomFilter) Engine() ProbabilisticEngine {
+	return StableBloom
+}
+
+func (f *StableBloomFilter) Drop() error {
+	log.Info().Msg("Drop() not implemented")
+	return nil
 }
 
 func (f *StableBloomFilter) setIsReady(state bool) {
@@ -111,7 +180,6 @@ func (f *StableBloomFilter) loadFromDumpFile() (int64, error) {
 	defer file.Close()
 
 	numBytes, err := f.SBF.ReadFrom(file)
-	f.PrintLogStat()
 
 	return numBytes, err
 }
@@ -124,90 +192,86 @@ func (f *StableBloomFilter) isDumpExist() bool {
 	return true
 }
 
-func (f *StableBloomFilter) Boostrap(sourceFile string, force bool) {
-	f.setIsReady(false)
-	defer f.setIsReady(true)
-
-	forceLoadFromSource := force && sourceFile != ""
-	defaultDumpLoad := !force && f.isDumpExist()
-	defaultSourceLoad := !force && sourceFile != "" && !f.isDumpExist()
-	emptyLoad := sourceFile == "" && !f.isDumpExist()
-
-	if forceLoadFromSource {
-		log.Info().Msg(fmt.Sprintf("Try force load data from: %s!", sourceFile))
-		f.bootstrap(sourceFile)
-	}
-
-	if defaultDumpLoad {
-		log.Info().Msg(fmt.Sprintf("%s exist. Load ...", f.dumpFilepath))
-		_, err := f.loadFromDumpFile()
-		if err != nil {
-			log.Error().Msg(fmt.Sprintf("Error load from dump file: %s", f.dumpFilepath))
-		}
-	}
-
-	if defaultSourceLoad {
-		log.Info().Msg(fmt.Sprintf("Try load data from: %s", sourceFile))
-		f.bootstrap(sourceFile)
-	}
-
-	if emptyLoad {
-		log.Info().Msg("Start empty filter")
-	}
-}
-
-func (f *StableBloomFilter) PrintLogStat() {
-	// StablePoint returns the limit of the expected fraction of zeros in the Filter
-	log.Debug().Msg(fmt.Sprintf("[P:%d] [K: %d] Cells: %s, Stable point: %f, FalsePositiveRate: %f",
-		f.SBF.P(),
-		f.SBF.K(),
-		humanize.FormatInteger(integerFormat, int(f.SBF.Cells())),
-		f.SBF.StablePoint(),
-		f.SBF.FalsePositiveRate(),
-	))
-}
-
 func (f *StableBloomFilter) bootstrap(filename string) {
 	f.mux.Lock()
 	defer f.mux.Unlock()
 
 	file, err := os.Open(filename)
 	if err != nil {
-		log.Error().Msg(fmt.Sprintf("Load from file err: %v", err))
+		f.LogCh <- utils.LogEvent{Level: zerolog.ErrorLevel, Name: bootstrapName, Msg: fmt.Sprintf("Load from file err: %v", err)}
 		return
 	}
+	totalLines, _ := lineCounter(filename)
 	defer file.Close()
 
-	counter := 0
+	added, scanned := 0, 0
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
-		f.SBF.Add(scanner.Bytes())
-		counter++
-		f.needCheckpoint = false
-		if counter%10_000_000 == 0 {
-			f.printCounter(counter)
+		scanned++
+		if !f.SBF.TestAndAdd(scanner.Bytes()) {
+			added++
+			f.needCheckpoint = false
+			f.LogCh <- utils.LogEvent{Level: zerolog.InfoLevel, Name: "add", Count: 1.0}
+			if added%1_000_000 == 0 {
+				f.LogCh <- utils.LogEvent{
+					Level: zerolog.DebugLevel,
+					Name:  bootstrapName,
+					Msg:   fmt.Sprintf("Добавлено: %s из [%s]", utils.HumInt(added), utils.HumInt(totalLines)),
+				}
+			}
 		}
 	}
 
 	if err = scanner.Err(); err != nil {
-		log.Error().Msg(fmt.Sprintf("Load from file err: %v", err))
+		f.LogCh <- utils.LogEvent{Level: zerolog.ErrorLevel, Name: bootstrapName, Msg: fmt.Sprintf("Load from file err: %v", err)}
 	}
 
 	f.needCheckpoint = true
-	f.PrintLogStat()
-	f.printCounter(counter)
+
+	skipped := scanned - added
+	f.LogCh <- utils.LogEvent{
+		Level: zerolog.DebugLevel,
+		Name:  bootstrapName,
+		Msg:   fmt.Sprintf("Добавлено: [%s] Пропущено [%s]", utils.HumInt(added), utils.HumInt(skipped)),
+		// Count: float64(added),
+	}
+
 }
 
-// printCounter P returns the number of cells decremented on every add.
-func (f *StableBloomFilter) printCounter(counter int) {
-	log.Info().Msg(fmt.Sprintf("Добавлено: %s", humanize.FormatInteger(integerFormat, counter)))
+func (f *StableBloomFilter) printLogStat() {
+	msg := fmt.Sprintf("[P: %d] [K: %d] Cells: %s, Stable point: %f, FalsePositiveRate: %f",
+		f.SBF.P(),
+		f.SBF.K(),
+		utils.HumInt(int(f.SBF.Cells())),
+		f.SBF.StablePoint(),
+		f.SBF.FalsePositiveRate(),
+	)
+	f.LogCh <- utils.LogEvent{Level: zerolog.DebugLevel, Name: bootstrapName, Msg: msg}
 }
 
-func (f *StableBloomFilter) Engine() ProbabilisticEngine {
-	return StableBloom
-}
+func lineCounter(filename string) (int, error) {
+	count := 0
+	file, err := os.Open(filename)
+	if err != nil {
+		return count, err
+	}
+	defer file.Close()
 
-func (f *StableBloomFilter) Drop() error {
-	log.Info().Msg("Drop() not implemented")
-	return nil
+	buf := make([]byte, 32*1024)
+	lineSep := []byte{'\n'}
+
+	for {
+		c, err := file.Read(buf)
+		if err != nil && err != io.EOF {
+			return count, err
+		}
+
+		count += bytes.Count(buf[:c], lineSep)
+
+		if err == io.EOF {
+			break
+		}
+	}
+
+	return count, nil
 }

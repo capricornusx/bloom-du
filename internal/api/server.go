@@ -2,9 +2,11 @@ package api
 
 import (
 	"errors"
+	"fmt"
 	"net"
 	"net/http"
 	"net/http/pprof"
+	"strconv"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -18,6 +20,8 @@ const (
 	defaultTimeout     = 5 * time.Second
 	defaultIdleTimeout = 2 * defaultTimeout
 	labelQuery         = "type"
+	metricsPath        = "/metrics"
+	healthPath         = "/health"
 )
 
 var apiHandlersFunc = map[string]http.HandlerFunc{
@@ -28,9 +32,12 @@ var apiHandlersFunc = map[string]http.HandlerFunc{
 	"/health":         healthHandler,
 }
 
-var labelNames = []string{labelQuery}
+var (
+	labelNames = []string{labelQuery}
+	objectives = map[float64]float64{0.5: 0.05, 0.9: 0.01, 0.99: 0.001}
+	buckets    = []float64{.02, .05, .1, .25, .5, 1, 5}
+)
 
-// todo сделать массивы (counters), (gauges).. и потом их добавлять циклом, видел в какой-то репе
 var (
 	CurrentConfig = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
@@ -46,62 +53,43 @@ var (
 			Help:      "Добавлено элементов",
 		}, labelNames,
 	)
-	FilterProperty = prometheus.NewGaugeVec(
-		prometheus.GaugeOpts{
-			Namespace: metricsNamespace,
-			Name:      "filter_properties",
-			Help:      "filter properties",
-		}, labelNames,
-	)
-	QueryDuration = prometheus.NewSummaryVec(
+	requestDurationSummary = prometheus.NewSummaryVec(
 		prometheus.SummaryOpts{
 			Namespace:  metricsNamespace,
-			Subsystem:  "storage",
-			Name:       "query_duration_seconds",
-			Help:       "A Summary of successful query durations in seconds.",
-			Objectives: map[float64]float64{0.5: 0.05, 0.9: 0.01, 0.99: 0.001},
-		}, labelNames)
+			Subsystem:  "api",
+			Name:       "http_request_duration_seconds",
+			Help:       "Time (in seconds) spent serving HTTP requests",
+			Objectives: objectives,
+		},
+		[]string{"path"},
+	)
+	requestDurationHistogram = prometheus.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Namespace: metricsNamespace,
+			Subsystem: "api",
+			Name:      "http_request_hist_duration_seconds",
+			Help:      "Histogram of duration HTTP requests",
+			Buckets:   buckets, // prometheus.DefBuckets,
+		}, []string{"path"})
+	responseCounter = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Namespace: metricsNamespace,
+			Subsystem: "api",
+			Name:      "http_response_codes_total",
+			Help:      "Number of HTTP responses sent, partitioned by status code and HTTP method.",
+		},
+		[]string{"code"},
+	)
 )
 
-// initMetrics Prometheus metrics
-func initMetrics() {
-	prometheus.MustRegister(CurrentConfig)
-	prometheus.MustRegister(Elements)
-	prometheus.MustRegister(QueryDuration)
-	prometheus.MustRegister(FilterProperty)
+type responseWriter struct {
+	http.ResponseWriter
+	statusCode int
 }
 
-func healthHandler(w http.ResponseWriter, _ *http.Request) {
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	_, err := w.Write([]byte("OK"))
-	if err != nil {
-		return
-	}
-}
-
-func getMux() *http.ServeMux {
-	var HandlerDebug, HandlerPrometheus = 1, 1
-
-	mux := http.NewServeMux()
-
-	if HandlerDebug != 0 {
-		mux.HandleFunc("/debug/pprof/", pprof.Index)
-		mux.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
-		mux.HandleFunc("/debug/pprof/profile", pprof.Profile)
-		mux.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
-		mux.HandleFunc("/debug/pprof/trace", pprof.Trace)
-	}
-
-	if HandlerPrometheus != 0 {
-		initMetrics()
-		mux.Handle("/metrics", promhttp.Handler())
-	}
-
-	for path, handler := range apiHandlersFunc {
-		mux.Handle(path, handler)
-	}
-
-	return mux
+func (rw *responseWriter) WriteHeader(code int) {
+	rw.statusCode = code
+	rw.ResponseWriter.WriteHeader(code)
 }
 
 // RunHTTPServers Возвращает список серверов, чтобы потом мы могли корректно остановить их по сигналу
@@ -109,9 +97,11 @@ func RunHTTPServers() (*http.Server, error) {
 	httpAddress := viper.GetString("address")
 	httpPort := viper.GetString("port")
 
+	mux := getMux()
+
 	server := &http.Server{
 		Addr:         net.JoinHostPort(httpAddress, httpPort),
-		Handler:      getMux(),
+		Handler:      measureHandler(mux),
 		ReadTimeout:  defaultTimeout,
 		WriteTimeout: defaultTimeout,
 		IdleTimeout:  defaultIdleTimeout,
@@ -126,4 +116,78 @@ func RunHTTPServers() (*http.Server, error) {
 	}()
 
 	return server, nil
+}
+
+// TODO
+func RunUnixSocket() {
+	listener, err := net.Listen("unix", "/tmp/bloom-du.sock")
+	if err != nil {
+		log.Debug().Msg(fmt.Sprintf("Error start unix socket [%v]", err))
+	}
+	defer listener.Close()
+}
+
+// initMetrics Prometheus metrics
+func initMetrics() {
+	prometheus.MustRegister(CurrentConfig)
+	prometheus.MustRegister(Elements)
+	prometheus.MustRegister(requestDurationSummary)
+	prometheus.MustRegister(requestDurationHistogram)
+	prometheus.MustRegister(responseCounter)
+}
+
+func measureHandler(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		started := time.Now()
+		path := r.URL.Path
+		// Создаем writer, который будет отслеживать статус код ответа
+		writer := &responseWriter{ResponseWriter: w}
+
+		if path == metricsPath || path == healthPath {
+			next.ServeHTTP(writer, r)
+			return
+		}
+
+		next.ServeHTTP(writer, r)
+
+		observe(started, path)
+		responseCounter.WithLabelValues(strconv.Itoa(writer.statusCode)).Inc()
+	})
+}
+
+func observe(started time.Time, path string) {
+	duration := time.Since(started).Seconds()
+	requestDurationSummary.WithLabelValues(path).Observe(duration)
+	requestDurationHistogram.WithLabelValues(path).Observe(duration)
+}
+
+func healthHandler(w http.ResponseWriter, _ *http.Request) {
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	_, err := w.Write([]byte("OK"))
+	if err != nil {
+		return
+	}
+}
+
+func getMux() *http.ServeMux {
+	var HandlerDebug = 1
+
+	mux := http.NewServeMux()
+
+	if HandlerDebug != 0 {
+		mux.HandleFunc("/debug/pprof/", pprof.Index)
+		mux.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
+		mux.HandleFunc("/debug/pprof/profile", pprof.Profile)
+		mux.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
+		mux.HandleFunc("/debug/pprof/trace", pprof.Trace)
+	}
+
+	initMetrics()
+	mux.Handle(metricsPath, promhttp.Handler())
+
+	for path, handler := range apiHandlersFunc {
+		mux.Handle(path, handler)
+	}
+
+	return mux
 }
