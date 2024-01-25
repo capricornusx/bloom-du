@@ -39,8 +39,8 @@ tidy:
 	go mod tidy
 
 build: format tidy
-	CGO_ENABLED=0 GOOS="linux" GOARCH="amd64" go build -o dist/docker/bloom-du
+	CGO_ENABLED=0 GOOS="linux" GOARCH="amd64" go build -o ./bloom-du
 
 build-docker: build
-	docker build -t ${DOCKER_IMAGE} -f dist/docker/bloom-du.Dockerfile dist/docker/
+	docker build -t ${DOCKER_IMAGE} -f Dockerfile .
 	docker push ${DOCKER_IMAGE}

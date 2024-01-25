@@ -5,7 +5,7 @@
 /export.sql
 dump.rdb
 .jekyll-cache
-.sass-cache
+bloom-du
 
 # Node
 /webui/node_modules

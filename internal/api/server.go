@@ -126,9 +126,9 @@ func RunUnixSocket(path string) (net.Listener, error) {
 	}
 	go func() {
 		for {
-			conn, err := listener.Accept()
-			if err != nil {
-				log.Fatal().Err(err).Send()
+			conn, errs := listener.Accept()
+			if errs != nil {
+				log.Fatal().Err(errs).Send()
 				break
 			}
 			go handleSocket(conn)
