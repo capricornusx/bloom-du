@@ -98,6 +98,73 @@ signs:
     signature: ${artifact}.asc
     artifacts: checksum
 
+  # .goreleaser.yaml
+dockers:
+  # You can have multiple Docker images.
+  - #
+    # ID of the image, needed if you want to filter by it later on (e.g. on custom publishers).
+    id: bloom-du
+
+    # GOOS of the built binaries/packages that should be used.
+    # Default: 'linux'
+    goos: linux
+
+    # GOARCH of the built binaries/packages that should be used.
+    # Default: 'amd64'
+    goarch: amd64
+
+    # GOARM of the built binaries/packages that should be used.
+    # Default: '6'
+    goarm: "6"
+
+    # GOAMD64 of the built binaries/packages that should be used.
+    # Default: 'v1'
+    goamd64: "v2"
+
+    # IDs to filter the binaries/packages.
+    ids:
+      - bloom-du
+
+    # Templates of the Docker image names.
+    # Templates: allowed
+    image_templates:
+      - "gcr.io/capricornusx/bloom-du:latest"
+
+    # Skips the docker push.
+    # Could be useful if you also do draft releases.
+    #
+    # If set to auto, the release will not be pushed to the Docker repository
+    #  in case there is an indicator of a prerelease in the tag, e.g. v1.0.0-rc1.
+    #
+    # Templates: allowed (since v1.19)
+    skip_push: true
+
+    # Path to the Dockerfile (from the project root).
+    # Default: 'Dockerfile'
+    # Templates: allowed.
+    dockerfile: "{{ .Env.DOCKERFILE }}"
+
+    # Set the "backend" for the Docker pipe.
+    # Valid options are: docker, buildx, podman.
+    # Podman is a GoReleaser Pro feature and is only available on Linux.
+    # Default: 'docker'
+    use: docker
+
+    # Docker build flags.
+    # Templates: allowed
+    build_flag_templates:
+      - "--pull"
+      - "--label=org.opencontainers.image.created={{.Date}}"
+      - "--label=org.opencontainers.image.title={{.ProjectName}}"
+      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+      - "--label=org.opencontainers.image.version={{.Version}}"
+      # - "--build-arg=FOO={{.Env.Bar}}"
+      - "--platform=linux/arm64"
+
+    # Extra flags to be passed down to the push command.
+    push_flags:
+      - --tls-verify=false
+
 # TODO:
 #nfpms:
 #  - package_name: bloom-du

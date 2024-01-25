@@ -24,8 +24,12 @@ import (
 )
 
 func main() {
-	var force bool
-	var checkpointInterval time.Duration
+	var (
+		force              bool
+		checkpointInterval time.Duration
+		socketPath         string
+	)
+
 	var rootCmd = &cobra.Command{
 		Use:   "bloom-du",
 		Short: "bloom-du - Bloom Filter implementation",
@@ -38,10 +42,12 @@ func main() {
 			viper.SetDefault("log_level", "info")
 			viper.SetDefault("force", false)
 			viper.SetDefault("checkpoint_interval", 600*time.Second)
+			viper.SetDefault("checkpoint_path", "/var/lib/bloom-du/sbfData.bloom")
+			viper.SetDefault("socket_path", "/tmp/bloom-du.sock")
 
 			bindPFlags := []string{
 				"source", "port", "address", "log_level", "force",
-				"checkpoint_interval",
+				"checkpoint_interval", "socket_path", "checkpoint_path",
 			}
 			for _, flag := range bindPFlags {
 				_ = viper.BindPFlag(flag, cmd.Flags().Lookup(flag))
@@ -59,8 +65,15 @@ func main() {
 			} else {
 				log.Info().Msgf("listen and serve on: %s", httpServer.Addr)
 			}
-			infoCh := make(chan os.Signal, 1)
-			go handleSignals(infoCh, httpServer)
+
+			_, err = api.RunUnixSocket(socketPath)
+			if err != nil {
+				log.Fatal().Msgf("error running Socket: %v", err)
+			} else {
+				log.Info().Msgf("listen on socket: %s", socketPath)
+			}
+
+			go handleSignals(httpServer)
 
 			api.Start()
 
@@ -70,6 +83,8 @@ func main() {
 				Int("pid", os.Getpid()).
 				Int("gomaxprocs", runtime.GOMAXPROCS(0)).
 				Str("log_level", viper.GetString("log_level")).
+				Str("checkpoint_interval", checkpointInterval.String()).
+				Str("checkpoint_path", viper.GetString("checkpoint_path")).
 				Msg("starting")
 
 			ticker := time.NewTicker(checkpointInterval)
@@ -78,11 +93,6 @@ func main() {
 			for {
 				select {
 				case <-ticker.C:
-					api.Checkpoint()
-				case <-infoCh:
-					// TODO, сохранять дамп по сигналу SIGHUP или через API
-					// если сигнал пришёл от CTRL+C то наверное и чекпоинт не нужен
-					// тем более на этапе bootstrap
 					api.Checkpoint()
 				}
 			}
@@ -95,11 +105,13 @@ func main() {
 	rootCmd.Flags().StringP("log_level", "", "info", "log level: trace, debug, info, error, fatal or none")
 	rootCmd.PersistentFlags().BoolVarP(&force, "force", "f", false, "force load from source file, ignoring a dump")
 	rootCmd.PersistentFlags().DurationVarP(&checkpointInterval, "checkpoint_interval", "i", 600*time.Second, "checkpoint")
+	rootCmd.Flags().StringP("checkpoint_path", "o", "/var/lib/bloom-du/sbfData.bloom", "checkpoint path")
+	rootCmd.PersistentFlags().StringVarP(&socketPath, "socket_path", "u", "/tmp/bloom-du.sock", "Unix socket path")
 
 	var versionCmd = &cobra.Command{
 		Use:   "version",
-		Short: "bloom-du version information",
-		Long:  `Print the version information of bloom-du`,
+		Short: "Show bloom-du version information",
+		Long:  `Show bloom-du version information`,
 		Run: func(cmd *cobra.Command, args []string) {
 			fmt.Printf("bloom-du v%s (Go version: %s)\n", build.Version, runtime.Version())
 		},
@@ -131,7 +143,7 @@ func main() {
 	_ = rootCmd.Execute()
 }
 
-func handleSignals(infoCh chan<- os.Signal, httpServer *http.Server) {
+func handleSignals(httpServer *http.Server) {
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh,
 		os.Interrupt,
@@ -147,12 +159,27 @@ func handleSignals(infoCh chan<- os.Signal, httpServer *http.Server) {
 		log.Info().Msgf("signal received: %v", sig)
 		switch sig {
 		case syscall.SIGHUP:
-			log.Info().Msg("reloading configuration")
+			log.Info().Msg("TODO reloading configuration")
 			// tryReadConfig()
 		case syscall.SIGINT, syscall.SIGTERM, os.Interrupt:
 			log.Info().Msg("Shutting down ...")
-			infoCh <- syscall.SIGTERM
-			go time.AfterFunc(3*time.Second, func() { os.Exit(0) })
+
+			shutdownTimeout := 5 * time.Second
+			go time.AfterFunc(shutdownTimeout, func() { os.Exit(1) })
+
+			var wg sync.WaitGroup
+
+			ctx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
+			wg.Add(1)
+			go func(srv *http.Server) {
+				defer wg.Done()
+				_ = srv.Shutdown(ctx)
+			}(httpServer)
+
+			wg.Wait()
+			cancel()
+			api.Checkpoint()
+			cleanup()
 		case syscall.SIGUSR2:
 			log.Info().Msg("Test shutting down ...")
 
@@ -171,7 +198,7 @@ func handleSignals(infoCh chan<- os.Signal, httpServer *http.Server) {
 			wg.Wait()
 			cancel()
 
-			os.Exit(0)
+			os.Exit(1)
 		default:
 		}
 	}
@@ -220,5 +247,10 @@ func setupLogging() *os.File {
 	}
 
 	return nil
+}
 
+func cleanup() {
+	socketPath := viper.GetString("socket_path")
+	_ = os.Remove(socketPath)
+	// os.Exit(1)
 }

@@ -27,7 +27,7 @@ func MakeEngine(name string) (Filter, error) {
 	switch name {
 	case "postgres":
 		logCh := make(chan utils.LogEvent, 5)
-		return NewStableBloomFilter("", false, logCh), nil
+		return NewStableBloomFilter("", false, logCh, "sbfData.bloom"), nil
 
 	default:
 		return nil, fmt.Errorf("unknown stucture type: `%s`", name)

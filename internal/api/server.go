@@ -2,7 +2,7 @@ package api
 
 import (
 	"errors"
-	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"net/http/pprof"
@@ -26,6 +26,7 @@ const (
 
 var apiHandlersFunc = map[string]http.HandlerFunc{
 	"/api/check":      handleCheck,
+	"/api/fcheck":     handleFastCheck,
 	"/api/add":        handleAdd,
 	"/api/bulk":       handleBulkLoad,
 	"/api/checkpoint": handleCheckpoint,
@@ -34,8 +35,8 @@ var apiHandlersFunc = map[string]http.HandlerFunc{
 
 var (
 	labelNames = []string{labelQuery}
-	objectives = map[float64]float64{0.5: 0.05, 0.9: 0.01, 0.99: 0.001}
-	buckets    = []float64{.02, .05, .1, .25, .5, 1, 5}
+	objectives = map[float64]float64{0.5: 0.05, 0.9: 0.01}
+	buckets    = []float64{.1, .25, .5, 1}
 )
 
 var (
@@ -118,13 +119,45 @@ func RunHTTPServers() (*http.Server, error) {
 	return server, nil
 }
 
-// TODO
-func RunUnixSocket() {
-	listener, err := net.Listen("unix", "/tmp/bloom-du.sock")
+func RunUnixSocket(path string) (net.Listener, error) {
+	listener, err := net.Listen("unix", path)
 	if err != nil {
-		log.Debug().Msg(fmt.Sprintf("Error start unix socket [%v]", err))
+		return nil, err
 	}
-	defer listener.Close()
+	go func() {
+		for {
+			conn, err := listener.Accept()
+			if err != nil {
+				log.Fatal().Err(err).Send()
+				break
+			}
+			go handleSocket(conn)
+		}
+	}()
+	return listener, nil
+}
+
+func handleSocket(conn net.Conn) {
+	defer conn.Close()
+	buf := make([]byte, 1024)
+	for {
+		// Читаем данные из соединения.
+		data, err := conn.Read(buf)
+		if err != nil {
+			if !errors.Is(err, io.EOF) {
+				log.Error().Msg(err.Error())
+			}
+			return
+		}
+
+		log.Info().Msg(string(buf[:data]))
+
+		// Отправляем данные обратно в соединение.
+		_, err = conn.Write(buf[:data])
+		if err != nil {
+			log.Error().Err(err).Send()
+		}
+	}
 }
 
 // initMetrics Prometheus metrics
@@ -140,10 +173,16 @@ func measureHandler(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		started := time.Now()
 		path := r.URL.Path
-		// Создаем writer, который будет отслеживать статус код ответа
+		// Создаем writer, который будет отслеживать код ответа
 		writer := &responseWriter{ResponseWriter: w}
 
 		if path == metricsPath || path == healthPath {
+			next.ServeHTTP(writer, r)
+			return
+		}
+
+		_, ok := apiHandlersFunc[path]
+		if !ok {
 			next.ServeHTTP(writer, r)
 			return
 		}

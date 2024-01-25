@@ -49,7 +49,13 @@ func Start() {
 
 	sourceFile := viper.GetString("source")
 	force := viper.GetBool("force")
-	Filter = bloom.NewStableBloomFilter(sourceFile, force, logCh)
+	checkpointPath := viper.GetString("checkpoint_path")
+	Filter = bloom.NewStableBloomFilter(
+		sourceFile,
+		force,
+		logCh,
+		checkpointPath,
+	)
 
 	CurrentConfig.WithLabelValues(
 		fmt.Sprintf("%d", Filter.SBF.Cells()),
@@ -58,6 +64,13 @@ func Start() {
 		fmt.Sprintf("%f", Filter.SBF.StablePoint()),
 		build.Version,
 	).Set(1)
+}
+
+func Checkpoint() {
+	start := time.Now()
+	if Filter.Checkpoint() {
+		utils.StopWatchLog(Filter.LogCh, start, "📍 Checkpoint done "+utils.HumByte(Filter.GetDumpSize()))
+	}
 }
 
 // Эксперименты с каналами
@@ -76,13 +89,6 @@ func handleLogs(logCh chan utils.LogEvent) {
 		default:
 			log.WithLevel(msg.Level).Msg(fmt.Sprintf("[%s]%s", msg.Name, msg.Msg))
 		}
-	}
-}
-
-func Checkpoint() {
-	start := time.Now()
-	if Filter.Checkpoint() {
-		utils.StopWatchLog(Filter.LogCh, start, "📍 Checkpoint done "+utils.HumByte(Filter.GetDumpSize()))
 	}
 }
 
@@ -105,20 +111,13 @@ func decodeInputJSON(w http.ResponseWriter, r *http.Request) RequestData {
 	return data
 }
 
-func handleCheck(w http.ResponseWriter, r *http.Request) {
+func handleFastCheck(w http.ResponseWriter, r *http.Request) {
 	start := time.Now()
-
-	value := decodeInputJSON(w, r).Value
-
-	err := queryValidate(w, value)
-	if err != nil {
-		return
-	}
-	err = checkIsReady(w)
-	if err != nil {
-		return
+	if r.Method != http.MethodHead {
+		httpRespond(w, http.StatusMethodNotAllowed, "")
 	}
 
+	value := r.URL.Query().Get("value")
 	result := Filter.Test(value)
 	msg := "Absolutely NOT exist!"
 	status := http.StatusNotFound
@@ -132,17 +131,46 @@ func handleCheck(w http.ResponseWriter, r *http.Request) {
 	httpRespond(w, status, msg)
 }
 
-func handleAdd(w http.ResponseWriter, r *http.Request) {
+func handleCheck(w http.ResponseWriter, r *http.Request) {
 	start := time.Now()
 
-	value := decodeInputJSON(w, r).Value
-
-	err := queryValidate(w, value)
+	err := checkIsReady(w)
 	if err != nil {
 		return
 	}
 
-	err = checkIsReady(w)
+	value := decodeInputJSON(w, r).Value
+
+	err = queryValidate(w, value)
+	if err != nil {
+		return
+	}
+
+	result := Filter.Test(value)
+	msg := "Absolutely NOT exist!"
+	status := http.StatusNotFound
+	if result {
+		msg = "May be exist!"
+		status = http.StatusOK
+		log.Error().Msg(fmt.Sprintf("[200] %s", value))
+	}
+
+	utils.StopWatchLog(Filter.LogCh, start, searchMsg)
+
+	httpRespond(w, status, msg)
+}
+
+func handleAdd(w http.ResponseWriter, r *http.Request) {
+	start := time.Now()
+
+	err := checkIsReady(w)
+	if err != nil {
+		return
+	}
+
+	value := decodeInputJSON(w, r).Value
+
+	err = queryValidate(w, value)
 	if err != nil {
 		return
 	}

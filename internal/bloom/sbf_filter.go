@@ -21,7 +21,6 @@ const (
 
 	// fpRate The desired rate of false positives.
 	fpRate        = 0.0001
-	dumpFileName  = "sbfData.bloom"
 	bootstrapName = "bootstrap"
 )
 
@@ -35,10 +34,10 @@ type StableBloomFilter struct {
 }
 
 // NewStableBloomFilter creating and bootstrap SBF from struct file if exist OR loading text data as source
-func NewStableBloomFilter(sourceFile string, force bool, logCh chan utils.LogEvent) *StableBloomFilter {
+func NewStableBloomFilter(sourceFile string, force bool, logCh chan utils.LogEvent, checkpointPath string) *StableBloomFilter {
 	defaultSbf := boom.NewStableBloomFilter(M, 1, fpRate)
 
-	filter := StableBloomFilter{SBF: defaultSbf, dumpFilepath: dumpFileName, LogCh: logCh}
+	filter := StableBloomFilter{SBF: defaultSbf, dumpFilepath: checkpointPath, LogCh: logCh}
 	filter.Boostrap(sourceFile, force)
 	filter.printLogStat()
 	return &filter
@@ -120,7 +119,7 @@ func (f *StableBloomFilter) Boostrap(sourceFile string, force bool) {
 
 	if forceLoadFromSource {
 		f.LogCh <- utils.LogEvent{
-			Level: zerolog.DebugLevel,
+			Level: zerolog.InfoLevel,
 			Name:  bootstrapName,
 			Msg:   fmt.Sprintf("Try force load data from: %s!", sourceFile),
 		}
@@ -196,12 +195,15 @@ func (f *StableBloomFilter) bootstrap(filename string) {
 	f.mux.Lock()
 	defer f.mux.Unlock()
 
+	// todo maybe implemented progressbar
+	totalLines, _ := lineCounter(filename)
+
 	file, err := os.Open(filename)
 	if err != nil {
 		f.LogCh <- utils.LogEvent{Level: zerolog.ErrorLevel, Name: bootstrapName, Msg: fmt.Sprintf("Load from file err: %v", err)}
 		return
 	}
-	totalLines, _ := lineCounter(filename)
+
 	defer file.Close()
 
 	added, scanned := 0, 0
@@ -214,7 +216,7 @@ func (f *StableBloomFilter) bootstrap(filename string) {
 			f.LogCh <- utils.LogEvent{Level: zerolog.InfoLevel, Name: "add", Count: 1.0}
 			if added%1_000_000 == 0 {
 				f.LogCh <- utils.LogEvent{
-					Level: zerolog.DebugLevel,
+					Level: zerolog.InfoLevel,
 					Name:  bootstrapName,
 					Msg:   fmt.Sprintf("Добавлено: %s из [%s]", utils.HumInt(added), utils.HumInt(totalLines)),
 				}
@@ -230,7 +232,7 @@ func (f *StableBloomFilter) bootstrap(filename string) {
 
 	skipped := scanned - added
 	f.LogCh <- utils.LogEvent{
-		Level: zerolog.DebugLevel,
+		Level: zerolog.InfoLevel,
 		Name:  bootstrapName,
 		Msg:   fmt.Sprintf("Добавлено: [%s] Пропущено [%s]", utils.HumInt(added), utils.HumInt(skipped)),
 		// Count: float64(added),

@@ -8,6 +8,7 @@ check-coverage: install-go-test-coverage
 
 PROJECT_PREFIX_1=capricornusx/bloom-du/
 PROJECT_PREFIX_2=bloom-du/
+DOCKER_IMAGE=capricornusx/bloom-du
 
 all: test build
 
@@ -37,5 +38,9 @@ gci:
 tidy:
 	go mod tidy
 
-build: format tidy inc
-	CGO_ENABLED=0 GOOS="linux" GOARCH="amd64" go install --tags fts5 ./cmd/magneticod
+build: format tidy
+	CGO_ENABLED=0 GOOS="linux" GOARCH="amd64" go build -o dist/docker/bloom-du
+
+build-docker: build
+	docker build -t ${DOCKER_IMAGE} -f dist/docker/bloom-du.Dockerfile dist/docker/
+	docker push ${DOCKER_IMAGE}

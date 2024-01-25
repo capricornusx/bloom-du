@@ -30,7 +30,7 @@ func TestTestAddValue(t *testing.T) {
 			t.Parallel()
 			filter := boom.NewDefaultStableBloomFilter(M, fpRate)
 
-			for i := 0; i < 50000; i++ {
+			for i := 0; i < 50_000; i++ {
 				value := fmt.Sprintf("test_%d", i)
 				filter.Add([]byte(value))
 			}
@@ -61,10 +61,10 @@ func TestTestAddValue2(t *testing.T) {
 		test := tt
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
-			logCh := make(chan utils.LogEvent, 5)
-			filter := NewStableBloomFilter("", false, logCh)
+			logCh := make(chan utils.LogEvent, 50)
+			filter := NewStableBloomFilter("", false, logCh, "")
 
-			for i := 0; i < 50000; i++ {
+			for i := 0; i < 50_000; i++ {
 				value := fmt.Sprintf("test_%d", i)
 				filter.Add(value)
 			}

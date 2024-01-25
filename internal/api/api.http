@@ -7,6 +7,10 @@ Content-Type: application/json
   "value": "1234567"
 }
 
+### Fast Check value
+HEAD http://localhost:8515/api/fcheck?value=1234567
+
+
 ### Add value
 POST http://localhost:8515/api/add
 Accept: application/json
