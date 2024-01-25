@@ -92,6 +92,8 @@ func handleLogs(logCh chan utils.LogEvent) {
 	}
 }
 
+// TODO почему-то всё равно летят ошибки, если пытаться слать запросы к API
+// до того, как фильтр будет готов их принимать
 func checkIsReady(w http.ResponseWriter) error {
 	if !Filter.IsReady() {
 		msg := "Filter is not ready now, please wait"
