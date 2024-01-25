@@ -159,7 +159,7 @@ dockers:
       - "--label=org.opencontainers.image.revision={{.FullCommit}}"
       - "--label=org.opencontainers.image.version={{.Version}}"
       # - "--build-arg=FOO={{.Env.Bar}}"
-      - "--platform=linux/arm64"
+      #- "--platform=linux/amd64/v3"
 
     # Extra flags to be passed down to the push command.
     push_flags:
