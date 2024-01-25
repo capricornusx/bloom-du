@@ -105,22 +105,9 @@ dockers:
   - #
     # ID of the image, needed if you want to filter by it later on (e.g. on custom publishers).
     id: bloom-du
-
-    # GOOS of the built binaries/packages that should be used.
-    # Default: 'linux'
     goos: linux
-
-    # GOARCH of the built binaries/packages that should be used.
-    # Default: 'amd64'
     goarch: amd64
-
-    # GOARM of the built binaries/packages that should be used.
-    # Default: '6'
-    goarm: "6"
-
-    # GOAMD64 of the built binaries/packages that should be used.
-    # Default: 'v1'
-    goamd64: "v3"
+    goamd64: "v1"
 
     # IDs to filter the binaries/packages.
     ids:
@@ -162,7 +149,7 @@ dockers:
       - "--label=org.opencontainers.image.title={{.ProjectName}}"
       - "--label=org.opencontainers.image.revision={{.FullCommit}}"
       - "--label=org.opencontainers.image.version={{.Version}}"
-      - "--platform=linux/amd64/v3"
+      # - "--platform=linux/amd64/v3"
 
     # Extra flags to be passed down to the push command.
     push_flags:
