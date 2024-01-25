@@ -120,7 +120,7 @@ dockers:
 
     # GOAMD64 of the built binaries/packages that should be used.
     # Default: 'v1'
-    goamd64: "v2"
+    goamd64: "v3"
 
     # IDs to filter the binaries/packages.
     ids:
@@ -162,8 +162,7 @@ dockers:
       - "--label=org.opencontainers.image.title={{.ProjectName}}"
       - "--label=org.opencontainers.image.revision={{.FullCommit}}"
       - "--label=org.opencontainers.image.version={{.Version}}"
-      # - "--build-arg=FOO={{.Env.Bar}}"
-      #- "--platform=linux/amd64/v3"
+      - "--platform=linux/amd64/v3"
 
     # Extra flags to be passed down to the push command.
     push_flags:
