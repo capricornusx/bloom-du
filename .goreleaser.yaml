@@ -10,13 +10,14 @@ release:
     name: bloom-du
   name_template: '{{.Tag}}'
   prerelease: auto
+  make_latest: true
   footer: |
     **Full Changelog**: https://github.com/capricornusx/bloom-du/compare/{{ .PreviousTag }}...{{ .Tag }}
 
     ## What to do next?
 
     - Read the [Documentation](https://github.com/capricornusx/bloom-du)
-  draft: true
+  draft: false
 builds:
   - goos:
       - linux
@@ -128,6 +129,9 @@ dockers:
     # Templates of the Docker image names.
     # Templates: allowed
     image_templates:
+      - "gcr.io/capricornusx/bloom-du:{{ .Tag }}"
+      - "gcr.io/capricornusx/bloom-du:v{{ .Major }}"
+      - "gcr.io/capricornusx/bloom-du:v{{ .Major }}.{{ .Minor }}"
       - "gcr.io/capricornusx/bloom-du:latest"
 
     # Skips the docker push.
@@ -137,7 +141,7 @@ dockers:
     #  in case there is an indicator of a prerelease in the tag, e.g. v1.0.0-rc1.
     #
     # Templates: allowed (since v1.19)
-    skip_push: true
+    skip_push: false
 
     # Path to the Dockerfile (from the project root).
     # Default: 'Dockerfile'
@@ -148,7 +152,7 @@ dockers:
     # Valid options are: docker, buildx, podman.
     # Podman is a GoReleaser Pro feature and is only available on Linux.
     # Default: 'docker'
-    use: docker
+    use: buildx
 
     # Docker build flags.
     # Templates: allowed
