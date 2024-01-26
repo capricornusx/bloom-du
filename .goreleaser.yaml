@@ -116,10 +116,10 @@ dockers:
     # Templates of the Docker image names.
     # Templates: allowed
     image_templates:
-      - "gcr.io/capricornusx/bloom-du:{{ .Tag }}"
-      - "gcr.io/capricornusx/bloom-du:v{{ .Major }}"
-      - "gcr.io/capricornusx/bloom-du:v{{ .Major }}.{{ .Minor }}"
-      - "gcr.io/capricornusx/bloom-du:latest"
+      - "ghcr.io/capricornusx/bloom-du:{{ .Tag }}"
+      - "ghcr.io/capricornusx/bloom-du:v{{ .Major }}"
+      - "ghcr.io/capricornusx/bloom-du:v{{ .Major }}.{{ .Minor }}"
+      - "ghcr.io/capricornusx/bloom-du:latest"
 
     # Skips the docker push.
     # Could be useful if you also do draft releases.
