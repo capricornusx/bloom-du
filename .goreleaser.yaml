@@ -98,7 +98,6 @@ signs:
     signature: ${artifact}.asc
     artifacts: checksum
 
-  # .goreleaser.yaml
 dockers:
   # You can have multiple Docker images.
   - #
@@ -145,7 +144,7 @@ dockers:
       # - --pull
       - --label=org.opencontainers.image.title={{.ProjectName}}
       - --label=org.opencontainers.image.version={{.Version }}
-      - --label=org.opencontainers.image.description="HTTP API for Bloom filter"
+      - --label=org.opencontainers.image.description="API for Bloom filter"
       - --label=org.opencontainers.image.url=https://github.com/capricornusx/bloom-du
       - --label=org.opencontainers.image.source=https://github.com/capricornusx/bloom-du
       - --label=org.opencontainers.image.revision={{.FullCommit}}
@@ -157,15 +156,34 @@ dockers:
     push_flags:
       - --tls-verify=false
 
+# https://goreleaser.com/customization/nfpm/
 nfpms:
   - package_name: bloom-du
     homepage: https://github.com/capricornusx/bloom-du
     maintainer: Dmitry Dubinin <capricornusx@gmail.com>
     description: |-
-      HTTP API for Bloom filter
+      API for Bloom filter
     license: MIT
     formats:
       - apk
       - deb
       - rpm
       - archlinux
+#    rpm:
+#      signature:
+#        key_file: "{{ .Env.GPG_FINGERPRINT }}"
+#    deb:
+#      signature:
+#        key_file: "{{ .Env.GPG_FINGERPRINT }}"
+#    apk:
+#      signature:
+#        key_file: "{{ .Env.GPG_FINGERPRINT }}"
+#    archlinux:
+#      # https://wiki.archlinux.org/title/PKGBUILD#pkgbase
+#      # https://dev-gang.ru/article/rukovodstvo-po-upakovke-go-dlja-arch-linux-lk5qokhan5/
+#      scripts:
+#        preupgrade: ./scripts/packaging/arch/preupgrade.sh
+#        postupgrade: ./scripts/packaging/arch/postupgrade.sh
+#
+#      pkgbase: bloom-du
+#      packager: Dmitry Dubinin <capricornusx@gmail.com>

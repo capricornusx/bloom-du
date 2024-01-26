@@ -29,7 +29,6 @@ type StableBloomFilter struct {
 	dumpFilepath   string
 	mux            sync.RWMutex
 	needCheckpoint bool // true if new element added. False if not AND last checkpoint success
-	isReady        bool
 	LogCh          chan utils.LogEvent
 }
 
@@ -84,7 +83,7 @@ func (f *StableBloomFilter) Checkpoint() bool {
 
 	file, err := os.OpenFile(f.dumpFilepath, os.O_RDWR|os.O_CREATE, 0644)
 	if err != nil {
-		log.Panic().Err(err).Send()
+		log.Fatal().Err(err).Send()
 	}
 	defer file.Close()
 
@@ -104,14 +103,7 @@ func (f *StableBloomFilter) Checkpoint() bool {
 	return true
 }
 
-func (f *StableBloomFilter) IsReady() bool {
-	return f.isReady
-}
-
 func (f *StableBloomFilter) Boostrap(sourceFile string, force bool) {
-	f.setIsReady(false)
-	defer f.setIsReady(true)
-
 	forceLoadFromSource := force && sourceFile != ""
 	defaultDumpLoad := !force && f.isDumpExist()
 	defaultSourceLoad := !force && sourceFile != "" && !f.isDumpExist()
@@ -134,7 +126,7 @@ func (f *StableBloomFilter) Boostrap(sourceFile string, force bool) {
 		}
 		_, err := f.loadFromDumpFile()
 		if err != nil {
-			log.Error().Msg(fmt.Sprintf("Error load from dump file: %s", f.dumpFilepath))
+			log.Error().Msgf("Error load from dump file: %s", f.dumpFilepath)
 		}
 	}
 
@@ -165,17 +157,13 @@ func (f *StableBloomFilter) Drop() error {
 	return nil
 }
 
-func (f *StableBloomFilter) setIsReady(state bool) {
-	f.isReady = state
-}
-
 func (f *StableBloomFilter) loadFromDumpFile() (int64, error) {
-	f.mux.Lock()
-	defer f.mux.Unlock()
 	file, err := os.OpenFile(f.dumpFilepath, os.O_RDONLY, 0644)
 	if err != nil {
-		log.Panic().Err(err).Send()
+		log.Fatal().Err(err).Send()
 	}
+	f.mux.Lock()
+	defer f.mux.Unlock()
 	defer file.Close()
 
 	numBytes, err := f.SBF.ReadFrom(file)

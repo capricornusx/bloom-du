@@ -137,6 +137,7 @@ func RunUnixSocket(path string) (net.Listener, error) {
 	return listener, nil
 }
 
+// TODO add metrics
 func handleSocket(conn net.Conn) {
 	defer conn.Close()
 	buf := make([]byte, 1024)
@@ -145,7 +146,7 @@ func handleSocket(conn net.Conn) {
 		data, err := conn.Read(buf)
 		if err != nil {
 			if !errors.Is(err, io.EOF) {
-				log.Error().Msg(err.Error())
+				log.Error().Err(err).Send()
 			}
 			return
 		}

@@ -1,0 +1,17 @@
+version: '3.6'
+services:
+
+  bloom:
+    container_name: bloom
+    image: ghcr.io/capricornusx/bloom-du:latest
+    command: --log_level=info --checkpoint_path=/var/lib/bloom-du/test.bloom
+    ports:
+      - "8515:8515"
+    volumes:
+      - ./storage:/var/lib/bloom-du/
+    healthcheck:
+      test: [ "CMD", "sh", "-c", "wget -nv -O - http://localhost:8515/health" ]
+      interval: 1s
+      timeout: 1s
+      retries: 5
+    restart: on-failure

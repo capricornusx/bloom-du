@@ -28,6 +28,7 @@ const (
 )
 
 var Filter *bloom.StableBloomFilter
+var isReady bool
 
 type RequestData struct {
 	Value   string `json:"value"`
@@ -43,6 +44,10 @@ type ResponseData struct {
 	Status  int    `json:"status"`
 }
 
+func init() {
+	isReady = false
+}
+
 func Start() {
 	logCh := make(chan utils.LogEvent, 10)
 	go handleLogs(logCh)
@@ -56,6 +61,7 @@ func Start() {
 		logCh,
 		checkpointPath,
 	)
+	isReady = true
 
 	CurrentConfig.WithLabelValues(
 		fmt.Sprintf("%d", Filter.SBF.Cells()),
@@ -68,7 +74,7 @@ func Start() {
 
 func Checkpoint() {
 	start := time.Now()
-	if Filter.Checkpoint() {
+	if isReady && Filter.Checkpoint() {
 		utils.StopWatchLog(Filter.LogCh, start, "📍 Checkpoint done "+utils.HumByte(Filter.GetDumpSize()))
 	}
 }
@@ -81,13 +87,13 @@ func handleLogs(logCh chan utils.LogEvent) {
 			if msg.Count != 0 {
 				Elements.WithLabelValues("add_after_test").Add(msg.Count)
 			}
-			log.WithLevel(msg.Level).Msg(fmt.Sprintf("[Bootstrap] %s", msg.Msg))
+			log.WithLevel(msg.Level).Msgf("[Bootstrap] %s", msg.Msg)
 		case "api":
-			log.WithLevel(msg.Level).Msg(fmt.Sprintf("[API] %s", msg.Msg))
+			log.WithLevel(msg.Level).Msgf("[API] %s", msg.Msg)
 		case "add":
 			Elements.WithLabelValues("add_after_test").Add(msg.Count)
 		default:
-			log.WithLevel(msg.Level).Msg(fmt.Sprintf("[%s]%s", msg.Name, msg.Msg))
+			log.WithLevel(msg.Level).Msgf("[%s]%s", msg.Name, msg.Msg)
 		}
 	}
 }
@@ -95,7 +101,7 @@ func handleLogs(logCh chan utils.LogEvent) {
 // TODO почему-то всё равно летят ошибки, если пытаться слать запросы к API
 // до того, как фильтр будет готов их принимать
 func checkIsReady(w http.ResponseWriter) error {
-	if !Filter.IsReady() {
+	if !isReady {
 		msg := "Filter is not ready now, please wait"
 		httpRespond(w, http.StatusTooEarly, msg)
 		return errors.New("FAIL")
@@ -164,14 +170,9 @@ func handleCheck(w http.ResponseWriter, r *http.Request) {
 func handleAdd(w http.ResponseWriter, r *http.Request) {
 	start := time.Now()
 
-	err := checkIsReady(w)
-	if err != nil {
-		return
-	}
-
 	value := decodeInputJSON(w, r).Value
 
-	err = queryValidate(w, value)
+	err := queryValidate(w, value)
 	if err != nil {
 		return
 	}
@@ -188,13 +189,8 @@ func handleAdd(w http.ResponseWriter, r *http.Request) {
 func handleBulkLoad(w http.ResponseWriter, r *http.Request) {
 	start := time.Now()
 
-	err := checkIsReady(w)
-	if err != nil {
-		return
-	}
-
 	var bulk RequestBulkData
-	err = json.NewDecoder(r.Body).Decode(&bulk)
+	err := json.NewDecoder(r.Body).Decode(&bulk)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 	}
@@ -241,7 +237,7 @@ func httpRespond(w http.ResponseWriter, statusCode int, msg string) {
 	}
 
 	if err := json.NewEncoder(w).Encode(&jsonResponse); err != nil {
-		log.Printf("%s: %v", MsgJSONError, err)
+		log.Error().Msgf("%s: %v", MsgJSONError, err)
 	}
 }
 

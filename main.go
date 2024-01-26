@@ -40,13 +40,14 @@ func main() {
 			viper.SetDefault("port", 8515)
 			viper.SetDefault("address", "0.0.0.0")
 			viper.SetDefault("log_level", "info")
+			viper.SetDefault("log_file", "")
 			viper.SetDefault("force", false)
 			viper.SetDefault("checkpoint_interval", 600*time.Second)
 			viper.SetDefault("checkpoint_path", "/var/lib/bloom-du/sbfData.bloom")
 			viper.SetDefault("socket_path", "/tmp/bloom-du.sock")
 
 			bindPFlags := []string{
-				"source", "port", "address", "log_level", "force",
+				"source", "port", "address", "log_level", "log_file", "force",
 				"checkpoint_interval", "socket_path", "checkpoint_path",
 			}
 			for _, flag := range bindPFlags {
@@ -57,6 +58,8 @@ func main() {
 			if file != nil {
 				defer func() { _ = file.Close() }()
 			}
+
+			assertPermissions()
 
 			httpServer, err := api.RunHTTPServers()
 			if err != nil {
@@ -99,14 +102,15 @@ func main() {
 		},
 	}
 
-	rootCmd.Flags().StringP("source", "s", "source.txt", "path to source data file")
+	rootCmd.Flags().StringP("source", "s", "", "path to source data file")
+	rootCmd.PersistentFlags().BoolVarP(&force, "force", "f", false, "force load from source file, ignoring a dump")
 	rootCmd.Flags().StringP("address", "a", "0.0.0.0", "address to serve")
 	rootCmd.Flags().Int("port", 8515, "port to serve on")
+	rootCmd.PersistentFlags().StringVarP(&socketPath, "socket_path", "u", "/tmp/bloom-du.sock", "Unix socket path")
 	rootCmd.Flags().StringP("log_level", "", "info", "log level: trace, debug, info, error, fatal or none")
-	rootCmd.PersistentFlags().BoolVarP(&force, "force", "f", false, "force load from source file, ignoring a dump")
+	rootCmd.Flags().StringP("log_file", "l", "", "log file path")
 	rootCmd.PersistentFlags().DurationVarP(&checkpointInterval, "checkpoint_interval", "i", 600*time.Second, "checkpoint")
 	rootCmd.Flags().StringP("checkpoint_path", "o", "/var/lib/bloom-du/sbfData.bloom", "checkpoint path")
-	rootCmd.PersistentFlags().StringVarP(&socketPath, "socket_path", "u", "/tmp/bloom-du.sock", "Unix socket path")
 
 	var versionCmd = &cobra.Command{
 		Use:   "version",
@@ -164,7 +168,7 @@ func handleSignals(httpServer *http.Server) {
 		case syscall.SIGINT, syscall.SIGTERM, os.Interrupt:
 			log.Info().Msg("Shutting down ...")
 
-			shutdownTimeout := 5 * time.Second
+			shutdownTimeout := 3 * time.Second
 			go time.AfterFunc(shutdownTimeout, func() { os.Exit(1) })
 
 			var wg sync.WaitGroup
@@ -181,24 +185,7 @@ func handleSignals(httpServer *http.Server) {
 			api.Checkpoint()
 			cleanup()
 		case syscall.SIGUSR2:
-			log.Info().Msg("Test shutting down ...")
-
-			shutdownTimeout := 5 * time.Second
-			go time.AfterFunc(shutdownTimeout, func() { os.Exit(1) })
-
-			var wg sync.WaitGroup
-
-			ctx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
-			wg.Add(1)
-			go func(srv *http.Server) {
-				defer wg.Done()
-				_ = srv.Shutdown(ctx)
-			}(httpServer)
-
-			wg.Wait()
-			cancel()
-
-			os.Exit(1)
+			log.Info().Msg("Test SIGUSR2")
 		default:
 		}
 	}
@@ -247,6 +234,36 @@ func setupLogging() *os.File {
 	}
 
 	return nil
+}
+
+// TODO add map and for range check
+func assertPermissions() {
+	checkpointPath := viper.GetString("checkpoint_path")
+	source := viper.GetString("source")
+
+	checkReadPermission(source)
+	checkWritePermission(checkpointPath)
+}
+
+func checkReadPermission(filePath string) {
+	file, err := os.Open(filePath)
+	if err != nil {
+		log.Fatal().Err(err).Send()
+	}
+
+	_ = file.Close()
+}
+
+func checkWritePermission(filePath string) {
+	file, err := os.Open(filePath)
+	if err != nil {
+		file, err = os.OpenFile(filePath, os.O_RDWR|os.O_CREATE, 0666)
+		if err != nil {
+			log.Fatal().Err(err).Send()
+		}
+		_ = os.Remove(filePath)
+	}
+	_ = file.Close()
 }
 
 func cleanup() {
