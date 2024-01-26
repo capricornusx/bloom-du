@@ -246,6 +246,9 @@ func assertPermissions() {
 }
 
 func checkReadPermission(filePath string) {
+	if filePath == "" {
+		return
+	}
 	file, err := os.Open(filePath)
 	if err != nil {
 		log.Fatal().Err(err).Send()
