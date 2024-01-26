@@ -163,7 +163,7 @@ nfpms:
     maintainer: Dmitry Dubinin <capricornusx@gmail.com>
     description: |-
       API for Bloom filter
-    license: MIT
+    license: Apache
     formats:
       - apk
       - deb
