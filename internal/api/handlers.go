@@ -154,7 +154,6 @@ func handleCheck(w http.ResponseWriter, r *http.Request) {
 	if result {
 		msg = "May be exist!"
 		status = http.StatusOK
-		log.Error().Msg(fmt.Sprintf("[200] %s", value))
 	}
 
 	utils.StopWatchLog(Filter.LogCh, start, searchMsg)

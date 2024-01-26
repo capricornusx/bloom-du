@@ -85,8 +85,7 @@ changelog:
 
 dist: dist
 signs:
-  -
-    cmd: gpg
+  - cmd: gpg
     args:
       - --batch
       - -u
@@ -114,7 +113,6 @@ dockers:
       - bloom-du
 
     # Templates of the Docker image names.
-    # Templates: allowed
     image_templates:
       - "ghcr.io/capricornusx/bloom-du:{{ .Tag }}"
       - "ghcr.io/capricornusx/bloom-du:v{{ .Major }}"
@@ -144,26 +142,30 @@ dockers:
     # Docker build flags.
     # Templates: allowed
     build_flag_templates:
-      - "--pull"
-      - "--label=org.opencontainers.image.created={{.Date}}"
-      - "--label=org.opencontainers.image.title={{.ProjectName}}"
-      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
-      - "--label=org.opencontainers.image.version={{.Version}}"
+      # - --pull
+      - --label=org.opencontainers.image.title={{.ProjectName}}
+      - --label=org.opencontainers.image.version={{.Version }}
+      - --label=org.opencontainers.image.description="HTTP API for Bloom filter"
+      - --label=org.opencontainers.image.url=https://github.com/capricornusx/bloom-du
+      - --label=org.opencontainers.image.source=https://github.com/capricornusx/bloom-du
+      - --label=org.opencontainers.image.revision={{.FullCommit}}
+      - --label=org.opencontainers.image.created={{.Date}}
+      - --label=org.opencontainers.image.licenses=MIT
       # - "--platform=linux/amd64/v3"
 
     # Extra flags to be passed down to the push command.
     push_flags:
       - --tls-verify=false
 
-# TODO:
-#nfpms:
-#  - package_name: bloom-du
-#    homepage: https://github.com/capricornusx/bloom-du
-#    maintainer: Dmitry Dubinin <capricornusx@gmail.com>
-#    description: |-
-#      HTTP API for Bloom filter
-#    formats:
-#      - apk
-#      - deb
-#      - rpm
-#      - archlinux
+nfpms:
+  - package_name: bloom-du
+    homepage: https://github.com/capricornusx/bloom-du
+    maintainer: Dmitry Dubinin <capricornusx@gmail.com>
+    description: |-
+      HTTP API for Bloom filter
+    license: MIT
+    formats:
+      - apk
+      - deb
+      - rpm
+      - archlinux
