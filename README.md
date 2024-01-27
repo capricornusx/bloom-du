@@ -4,6 +4,19 @@
 
 ### Bloom-du (HTTP API для фильтра Блума)
 
+#### 0. Установка
+
+ - Бинарный файл для вашей платформы (.deb, .rpm, .gz) 
+ - Docker image `ghcr.io/capricornusx/bloom-du`
+
+```sh
+docker run --rm -v tmpsf:/var/lib/bloom-du/ \
+-p 8515:8515 -it \
+ghcr.io/capricornusx/bloom-du --log_level=info
+```
+
+[docker-compose.yml](docs/docker-compose.yml)
+
 Добавить данные в фильтр можно несколькими способами:
 #### 1. Загрузка из файла (импорт)
 В папке с бинарным файлом разместить текстовый файл (например, `values.txt`), с одним значением на строку. 

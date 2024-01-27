@@ -234,6 +234,8 @@ func (f *StableBloomFilter) bootstrap() {
 		scanner = bufio.NewScanner(file)
 	}
 
+	lineCount := f.counter()
+
 	for scanner.Scan() {
 		scanned++
 		if !f.SBF.TestAndAdd(scanner.Bytes()) {
@@ -244,7 +246,7 @@ func (f *StableBloomFilter) bootstrap() {
 				f.LogCh <- utils.LogEvent{
 					Level: zerolog.InfoLevel,
 					Name:  bootstrapName,
-					Msg:   fmt.Sprintf("Добавлено: %s из [%s]", utils.HumInt(added), utils.HumInt(f.counter())),
+					Msg:   fmt.Sprintf("Добавлено: %s из [%s]", utils.HumInt(added), utils.HumInt(lineCount)),
 				}
 			}
 		}
@@ -263,7 +265,6 @@ func (f *StableBloomFilter) bootstrap() {
 		Msg:   fmt.Sprintf("Добавлено: [%s] Пропущено [%s]", utils.HumInt(added), utils.HumInt(skipped)),
 		// Count: float64(added),
 	}
-
 }
 
 func (f *StableBloomFilter) printLogStat() {
@@ -323,7 +324,6 @@ func lineCounterGz(filePath string) int {
 
 	for {
 		n, err := gz.Read(buf)
-		count += bytes.Count(buf[:n], lineSep)
 		if err != nil && err != io.EOF {
 			return count
 		}
