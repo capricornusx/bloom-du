@@ -1,6 +1,6 @@
-[![Go](https://github.com/capricornusx/bloom-du/actions/workflows/go.yml/badge.svg)](https://github.com/capricornusx/bloom-du/actions/workflows/go.yml)
 [![Lint](https://github.com/capricornusx/bloom-du/actions/workflows/lint.yml/badge.svg)](https://github.com/capricornusx/bloom-du/actions/workflows/lint.yml)
 [![Go Report Card](https://goreportcard.com/badge/github.com/capricornusx/bloom-du)](https://goreportcard.com/report/github.com/capricornusx/bloom-du)
+[![codecov](https://codecov.io/gh/capricornusx/bloom-du/graph/badge.svg?token=IO7ABLPOFP)](https://codecov.io/gh/capricornusx/bloom-du)
 
 ### Bloom-du (HTTP API для фильтра Блума)
 
