@@ -121,27 +121,14 @@ func (f *StableBloomFilter) Boostrap(force bool) {
 	emptyLoad := sourceFile == "" && !f.isDumpExist()
 
 	if forceLoadFromSource {
-		f.LogCh <- utils.LogEvent{
-			Level: zerolog.InfoLevel,
-			Name:  bootstrapName,
-			Msg:   fmt.Sprintf("Try force load data from: %s!", sourceFile),
-		}
 		if f.isDumpExist() {
-			_ = f.loadDump()
+			f.loadDump()
 		}
 		f.bootstrap()
 	}
 
 	if defaultDumpLoad {
-		f.LogCh <- utils.LogEvent{
-			Level: zerolog.InfoLevel,
-			Name:  bootstrapName,
-			Msg:   fmt.Sprintf("%s exist. Load ...", f.dumpFilepath),
-		}
-		err := f.loadDump()
-		if err != nil {
-			log.Error().Msgf("Error load from dump file: %s", f.dumpFilepath)
-		}
+		f.loadDump()
 	}
 
 	if defaultSourceLoad {
@@ -166,18 +153,25 @@ func (f *StableBloomFilter) Engine() ProbabilisticEngine {
 	return StableBloom
 }
 
-func (f *StableBloomFilter) loadDump() error {
+func (f *StableBloomFilter) loadDump() {
 	file, err := os.OpenFile(f.dumpFilepath, os.O_RDONLY, 0644)
 	if err != nil {
-		log.Fatal().Err(err).Send()
+		log.Error().Err(err).Send()
 	}
 	f.mux.Lock()
 	defer f.mux.Unlock()
 	defer file.Close()
+	f.LogCh <- utils.LogEvent{
+		Level: zerolog.InfoLevel,
+		Name:  bootstrapName,
+		Msg:   fmt.Sprintf("Try load dump: %s!", f.dumpFilepath),
+	}
 
 	_, err = f.SBF.ReadFrom(file)
 
-	return err
+	if err != nil {
+		log.Error().Err(err).Send()
+	}
 }
 
 func (f *StableBloomFilter) isDumpExist() bool {
