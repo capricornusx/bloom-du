@@ -75,7 +75,8 @@ func Start() {
 func Checkpoint() {
 	start := time.Now()
 	if isReady && Filter.Checkpoint() {
-		utils.StopWatchLog(Filter.LogCh, start, "📍 Checkpoint done "+utils.HumByte(Filter.GetDumpSize()))
+		dumpSize := Filter.GetDumpSize()
+		utils.StopWatchLog(Filter.LogCh, start, "📍 Checkpoint done "+utils.HumByte(&dumpSize))
 	}
 }
 

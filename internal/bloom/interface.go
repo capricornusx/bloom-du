@@ -19,7 +19,6 @@ type Filter interface {
 	Engine() ProbabilisticEngine
 	Add(value string)
 	Test(value string) bool
-	Drop() error
 }
 
 // MakeEngine TODO попробовать реализовать это через Cobra, а уже потом через API

@@ -70,9 +70,10 @@ func (f *StableBloomFilter) TestAndAdd(value string) bool {
 }
 
 func (f *StableBloomFilter) GetDumpSize() uint64 {
-	file, err := os.OpenFile(f.dumpFilepath, os.O_RDWR|os.O_CREATE, 0644)
+	file, err := os.OpenFile(f.dumpFilepath, os.O_RDONLY, 0644)
 	if err != nil {
 		log.Error().Err(err).Send()
+		return 0
 	}
 	defer file.Close()
 
@@ -125,6 +126,9 @@ func (f *StableBloomFilter) Boostrap(force bool) {
 			Name:  bootstrapName,
 			Msg:   fmt.Sprintf("Try force load data from: %s!", sourceFile),
 		}
+		if f.isDumpExist() {
+			_, _ = f.loadDump()
+		}
 		f.bootstrap()
 	}
 
@@ -134,7 +138,7 @@ func (f *StableBloomFilter) Boostrap(force bool) {
 			Name:  bootstrapName,
 			Msg:   fmt.Sprintf("%s exist. Load ...", f.dumpFilepath),
 		}
-		_, err := f.loadFromDumpFile()
+		_, err := f.loadDump()
 		if err != nil {
 			log.Error().Msgf("Error load from dump file: %s", f.dumpFilepath)
 		}
@@ -162,12 +166,7 @@ func (f *StableBloomFilter) Engine() ProbabilisticEngine {
 	return StableBloom
 }
 
-func (f *StableBloomFilter) Drop() error {
-	log.Info().Msg("Drop() not implemented")
-	return nil
-}
-
-func (f *StableBloomFilter) loadFromDumpFile() (int64, error) {
+func (f *StableBloomFilter) loadDump() (int64, error) {
 	file, err := os.OpenFile(f.dumpFilepath, os.O_RDONLY, 0644)
 	if err != nil {
 		log.Fatal().Err(err).Send()
@@ -194,7 +193,7 @@ func (f *StableBloomFilter) isGzSource() bool {
 	return ext == ".gz"
 }
 
-func (f *StableBloomFilter) counter() int {
+func (f *StableBloomFilter) getLineCount() int {
 	if f.isGzSource() {
 		return lineCounterGz(f.sourceFilepath)
 	}
@@ -234,7 +233,7 @@ func (f *StableBloomFilter) bootstrap() {
 		scanner = bufio.NewScanner(file)
 	}
 
-	lineCount := f.counter()
+	lineCount := f.getLineCount()
 
 	for scanner.Scan() {
 		scanned++
@@ -242,7 +241,7 @@ func (f *StableBloomFilter) bootstrap() {
 			added++
 			f.needCheckpoint = false
 			f.LogCh <- utils.LogEvent{Level: zerolog.InfoLevel, Name: "add", Count: 1.0}
-			if added%1_000_000 == 0 {
+			if added%10_000_000 == 0 {
 				f.LogCh <- utils.LogEvent{
 					Level: zerolog.InfoLevel,
 					Name:  bootstrapName,

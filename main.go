@@ -241,32 +241,8 @@ func assertPermissions() {
 	checkpointPath := viper.GetString("checkpoint_path")
 	source := viper.GetString("source")
 
-	checkReadPermission(source)
-	checkWritePermission(checkpointPath)
-}
-
-func checkReadPermission(filePath string) {
-	if filePath == "" {
-		return
-	}
-	file, err := os.Open(filePath)
-	if err != nil {
-		log.Fatal().Err(err).Send()
-	}
-
-	_ = file.Close()
-}
-
-func checkWritePermission(filePath string) {
-	file, err := os.Open(filePath)
-	if err != nil {
-		file, err = os.OpenFile(filePath, os.O_RDWR|os.O_CREATE, 0666)
-		if err != nil {
-			log.Fatal().Err(err).Send()
-		}
-		_ = os.Remove(filePath)
-	}
-	_ = file.Close()
+	utils.AssertReadPermission(source)
+	utils.AssertWritePermission(checkpointPath)
 }
 
 func cleanup() {
