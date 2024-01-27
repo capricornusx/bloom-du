@@ -127,7 +127,7 @@ func (f *StableBloomFilter) Boostrap(force bool) {
 			Msg:   fmt.Sprintf("Try force load data from: %s!", sourceFile),
 		}
 		if f.isDumpExist() {
-			_, _ = f.loadDump()
+			_ = f.loadDump()
 		}
 		f.bootstrap()
 	}
@@ -138,7 +138,7 @@ func (f *StableBloomFilter) Boostrap(force bool) {
 			Name:  bootstrapName,
 			Msg:   fmt.Sprintf("%s exist. Load ...", f.dumpFilepath),
 		}
-		_, err := f.loadDump()
+		err := f.loadDump()
 		if err != nil {
 			log.Error().Msgf("Error load from dump file: %s", f.dumpFilepath)
 		}
@@ -166,7 +166,7 @@ func (f *StableBloomFilter) Engine() ProbabilisticEngine {
 	return StableBloom
 }
 
-func (f *StableBloomFilter) loadDump() (int64, error) {
+func (f *StableBloomFilter) loadDump() error {
 	file, err := os.OpenFile(f.dumpFilepath, os.O_RDONLY, 0644)
 	if err != nil {
 		log.Fatal().Err(err).Send()
@@ -175,9 +175,9 @@ func (f *StableBloomFilter) loadDump() (int64, error) {
 	defer f.mux.Unlock()
 	defer file.Close()
 
-	numBytes, err := f.SBF.ReadFrom(file)
+	_, err = f.SBF.ReadFrom(file)
 
-	return numBytes, err
+	return err
 }
 
 func (f *StableBloomFilter) isDumpExist() bool {
