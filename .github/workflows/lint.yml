@@ -50,6 +50,7 @@ jobs:
       - name: Upload coverage report
         uses: codecov/codecov-action@v4
         env:
+          token: ${{ secrets.CODECOV_TOKEN }}
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
           COMMIT_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
         with:
