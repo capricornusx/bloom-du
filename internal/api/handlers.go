@@ -11,7 +11,6 @@ import (
 	"github.com/spf13/viper"
 
 	"bloom-du/internal/bloom"
-	"bloom-du/internal/build"
 	"bloom-du/internal/utils"
 )
 
@@ -27,7 +26,9 @@ const (
 	searchAddMsg = "✅ Время поиска + добавления"
 )
 
-var Filter *bloom.StableBloomFilter
+var Filter bloom.Filter
+
+// var Filter *bloom.StableBloomFilter
 var isReady bool
 
 type RequestData struct {
@@ -49,13 +50,15 @@ func init() {
 }
 
 func Start() {
-	logCh := make(chan utils.LogEvent, 10)
+	logCh := make(chan bloom.LogEvent, 10)
 	go handleLogs(logCh)
 
 	sourceFile := viper.GetString("source")
 	force := viper.GetBool("force")
 	checkpointPath := viper.GetString("checkpoint_path")
-	Filter = bloom.NewStableBloomFilter(
+
+	Filter, _ = bloom.MakeEngine(
+		bloom.StableBloom,
 		sourceFile,
 		force,
 		logCh,
@@ -63,25 +66,18 @@ func Start() {
 	)
 	isReady = true
 
-	CurrentConfig.WithLabelValues(
-		fmt.Sprintf("%d", Filter.SBF.Cells()),
-		fmt.Sprintf("%d", Filter.SBF.K()),
-		fmt.Sprintf("%f", Filter.SBF.FalsePositiveRate()),
-		fmt.Sprintf("%f", Filter.SBF.StablePoint()),
-		build.Version,
-	).Set(1)
 }
 
 func Checkpoint() {
 	start := time.Now()
 	if isReady && Filter.Checkpoint() {
 		dumpSize := Filter.GetDumpSize()
-		utils.StopWatchLog(Filter.LogCh, start, "📍 Checkpoint done "+utils.HumByte(&dumpSize))
+		bloom.StopWatchLog(Filter.LogCh(), start, "📍 Checkpoint done "+utils.HumByte(&dumpSize))
 	}
 }
 
 // Эксперименты с каналами
-func handleLogs(logCh chan utils.LogEvent) {
+func handleLogs(logCh chan bloom.LogEvent) {
 	for msg := range logCh {
 		switch msg.Name {
 		case "bootstrap":
@@ -128,16 +124,17 @@ func handleFastCheck(w http.ResponseWriter, r *http.Request) {
 
 	value := r.URL.Query().Get("value")
 	result := Filter.Test(value)
-	msg := "Absolutely NOT exist!"
+
 	status := http.StatusNotFound
 	if result {
-		msg = "May be exist!"
 		status = http.StatusOK
 	}
 
-	utils.StopWatchLog(Filter.LogCh, start, searchMsg)
+	bloom.StopWatchLog(Filter.LogCh(), start, searchMsg)
 
-	httpRespond(w, status, msg)
+	// TODO проверить что заголовок передаётся на клиент
+	w.Header().Set("x-filter", string(Filter.Engine()))
+	httpRespond(w, status, "")
 }
 
 func handleCheck(w http.ResponseWriter, r *http.Request) {
@@ -163,7 +160,7 @@ func handleCheck(w http.ResponseWriter, r *http.Request) {
 		status = http.StatusOK
 	}
 
-	utils.StopWatchLog(Filter.LogCh, start, searchMsg)
+	bloom.StopWatchLog(Filter.LogCh(), start, searchMsg)
 
 	httpRespond(w, status, msg)
 }
@@ -179,10 +176,10 @@ func handleAdd(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if Filter.TestAndAdd(value) {
-		utils.StopWatchLog(Filter.LogCh, start, searchAddMsg)
+		bloom.StopWatchLog(Filter.LogCh(), start, searchAddMsg)
 		httpRespond(w, http.StatusCreated, "✅ Добавлено!")
 	} else {
-		utils.StopWatchLog(Filter.LogCh, start, searchMsg)
+		bloom.StopWatchLog(Filter.LogCh(), start, searchMsg)
 		httpNotModified(w)
 	}
 }
@@ -204,7 +201,7 @@ func handleBulkLoad(w http.ResponseWriter, r *http.Request) {
 	}
 	skipped := len(bulk.Data) - added
 	msg := fmt.Sprintf("[bulk] ✅ Добавлено: %d, Пропущено: %d", added, skipped)
-	utils.StopWatchLog(Filter.LogCh, start, msg)
+	bloom.StopWatchLog(Filter.LogCh(), start, msg)
 
 	if added == 0 {
 		httpNotModified(w)

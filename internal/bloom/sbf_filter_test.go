@@ -7,8 +7,6 @@ import (
 	"testing"
 
 	boom "github.com/tylertreat/BoomFilters"
-
-	"bloom-du/internal/utils"
 )
 
 func TestTestAddValue(t *testing.T) {
@@ -63,7 +61,7 @@ func TestTestAddValue2(t *testing.T) {
 		test := tt
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
-			logCh := make(chan utils.LogEvent, 50)
+			logCh := make(chan LogEvent, 50)
 			filter := NewStableBloomFilter("", false, logCh, "")
 
 			for i := 0; i < 30_000; i++ {

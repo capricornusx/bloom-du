@@ -69,15 +69,74 @@ curl -X GET --location "http://localhost:8515/metrics"
 
 
 ### TODO
- - [ ] Graceful upgrade - обновление самого бинарника и корректная обработка клиентов (старых и новых)
- - [ ] Возможность создавать разные фильтры (название, настройки размера, fpRate ...)
- - [ ] config.yml для удобного старта сервиса с разными фильтрами
- - [ ] Валидация параметров для cli и api
- - [ ] code coverage
+- [ ] Возможность создавать разные фильтры (название, настройки размера, fpRate ...)
+- [ ] Graceful upgrade - обновление самого бинарника и корректная обработка клиентов (старых и новых)
+- [ ] config.yml для удобного старта сервиса с разными фильтрами
+- [ ] Валидация параметров для cli и api
+- [ ] code coverage
 
 
+### Тесты (redis_version:7.2.3)
 
+```redis
+BF.RESERVE, "key", 0.1, 200000000
+```
 
+Скорость работы в однопоточном режиме:
+
+| Case                               | RPS     |
+|------------------------------------|---------|
+| Нативно в Redis  [1](#native-case) | ~12 190 |
+| Реализация на Go [2](#golang-case) | ~15 705 |
+
+```math
+(15705 / 12190) * 100 = 128,8%
+```
+
+### native-case
+Клиентом на Go (github.com/redis/go-redis/v9), проверяем наличие ключа.
+Отправляем 1кк запросов в один поток. Redis работает в docker, на том же ПК.
+
+```redis
+BF.EXISTS, "key", "some_value"
+``` 
+
+### golang-case
+С помощью Apache benchmark запрос по http:
+
+```sh
+ab -k -i -n 1000000 -c 1 "http://localhost:8515/api/fcheck?value=some_value"
+```
+
+### Пример
+
+На своём проекте, есть проверка входящих данных на дубликаты. Причём мы всё равно должны записать эти данные в базу, 
+поэтому нельзя создать уникальный индекс, переложив процесс валидации на БД. Хотя всё равно необходимо наличие индекса 
+по искомому полю, чтобы в случае НЕ отрицательного ответа из фильтра, уже точно идти в БД. Нам не важен `fpRate`, 
+т.к. достаточно 100% отсутствия элемента. 
+Эффективность очень сильно зависит от соотношения оригиналов/дубликатов. В этом случае мы экономим обращениях в БД.
+Для наших задач подошло хорошо.
+
+```php
+public function isDouble(string $element): bool
+{
+   $isExist = findElementInFilter($element);
+
+   if ($isExist === true) {
+      // Элемент возможно есть фильтре, идём в БД чтобы проверить точно
+      $isExist = findElementInDatabase($element);
+   }
+
+   return $isExist;
+}
+
+$isDouble = isDouble($element);
+
+if ($isDouble === false) {
+   addElementToFilter($element);
+   addElementToDatabase($element);
+}
+```
 
 ### Ссылки, источники:
 
@@ -90,16 +149,13 @@ curl -X GET --location "http://localhost:8515/metrics"
    - [pgfaceting](https://github.com/cybertec-postgresql/pgfaceting)
    - [pg_roaringbitmap](https://github.com/ChenHuajun/pg_roaringbitmap)
 
-2. Redis с поддержкой это структуры. Но показывает существенно больший расход памяти при равных стартовых условиях. 
-Возможно потому что используется простая реализация фильтра, а у меня - Стабильная. Требует исследования. 
-Может я редис не правильно использовал.
-   - [Redis Stack](https://redis.io/docs/data-types/probabilistic/bloom-filter/)
-      Вариант редиса, который имеет из коробки, в том числе фильтр Блума.
+2. Redis. Поддерживается только классическая реализация фильтра
+   - [Redis data-types](https://redis.io/docs/data-types/probabilistic/bloom-filter/)
    - [RedisBloom](https://github.com/RedisBloom/RedisBloom) модуль, входящий в состав Redis Stack
    - [Redis bitmaps – Fast, easy, realtime metrics](https://spoolblog.wordpress.com/2011/11/29/fast-easy-realtime-metrics-using-redis-bitmaps/)
    - [Using Probabilistic Data Structures in Redis](https://semaphoreci.com/blog/probabilistic-data-structures-redis)
    - [Understanding Probabilistic Data Structures](https://github.com/guyroyse/understanding-probabilistic-data-structures)
-   - [Bloom Filter Calculator](https://hur.st/bloomfilter) Калькулятор для классической реализации Фильтра Блума
+   - [Bloom Filter Calculator](https://hur.st/bloomfilter) Калькулятор для классической реализации
 
 3. [Библиотека](https://github.com/tylertreat/BoomFilters) на Go, которая использована в этом проект как основная.
 Содержит в себе реализации стабильного фильтра Блума и других Probabilistic (вероятностных) структур.
@@ -108,7 +164,5 @@ curl -X GET --location "http://localhost:8515/metrics"
 6. [Roaring bitmaps - A better compressed bitset](https://roaringbitmap.org/about/)
 7. [Daniel Lemire](https://github.com/lemire) is a computer science professor. Roaring bitmaps contributor
 8. [Probabilistic Data Structures and Algorithms](https://github.com/gakhov)
-
-
 
 

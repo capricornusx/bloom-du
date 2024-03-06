@@ -14,8 +14,8 @@ import (
 	"bloom-du/internal/utils"
 )
 
-type StableBloomFilter struct {
-	SBF            *boom.StableBloomFilter
+type ClassicBloomFilter struct {
+	CBF            *boom.BloomFilter
 	sourceFilepath string
 	dumpFilepath   string
 	mux            sync.RWMutex
@@ -23,40 +23,35 @@ type StableBloomFilter struct {
 	logCh          chan LogEvent
 }
 
-// NewStableBloomFilter creating and bootstrap SBF from struct file if exist OR loading text data as source
-func NewStableBloomFilter(sourceFile string, force bool, logCh chan LogEvent, checkpointPath string) *StableBloomFilter {
-	defaultSbf := boom.NewStableBloomFilter(
-		1_000_000_000, // M Размер битового массива фильтра Блума.
-		3,
-		0.001, // fpRate The desired rate of false positives.
-	)
-
-	filter := StableBloomFilter{
-		SBF:            defaultSbf,
+// NewClassicBloomFilter creating and bootstrap from struct file if exist OR loading text data as source
+func NewClassicBloomFilter(sourceFile string, force bool, logCh chan LogEvent, checkpointPath string) *ClassicBloomFilter {
+	filter := ClassicBloomFilter{
+		CBF:            boom.NewBloomFilter(200_000_000, 0.1),
 		sourceFilepath: sourceFile,
 		dumpFilepath:   checkpointPath,
 		logCh:          logCh,
 	}
 	filter.Boostrap(force)
 	filter.printLogStat()
+
 	return &filter
 }
 
-func (f *StableBloomFilter) LogCh() chan<- LogEvent {
+func (f *ClassicBloomFilter) LogCh() chan<- LogEvent {
 	return f.logCh
 }
 
-func (f *StableBloomFilter) Add(value string) {
-	f.SBF.Add([]byte(value))
+func (f *ClassicBloomFilter) Add(value string) {
+	f.CBF.Add([]byte(value))
 	f.needCheckpoint = true
 }
 
-func (f *StableBloomFilter) Test(value string) bool {
-	return f.SBF.Test([]byte(value))
+func (f *ClassicBloomFilter) Test(value string) bool {
+	return f.CBF.Test([]byte(value))
 }
 
-func (f *StableBloomFilter) TestAndAdd(value string) bool {
-	result := f.SBF.TestAndAdd([]byte(value))
+func (f *ClassicBloomFilter) TestAndAdd(value string) bool {
+	result := f.CBF.TestAndAdd([]byte(value))
 	if !result {
 		f.needCheckpoint = true
 		f.LogCh() <- LogEvent{Level: zerolog.DebugLevel, Name: "add", Count: 1.0}
@@ -65,11 +60,11 @@ func (f *StableBloomFilter) TestAndAdd(value string) bool {
 	return !result
 }
 
-func (f *StableBloomFilter) GetDumpSize() uint64 {
+func (f *ClassicBloomFilter) GetDumpSize() uint64 {
 	return getDumpSize(f.dumpFilepath)
 }
 
-func (f *StableBloomFilter) Checkpoint() bool {
+func (f *ClassicBloomFilter) Checkpoint() bool {
 	if !f.needCheckpoint {
 		f.LogCh() <- LogEvent{Level: zerolog.DebugLevel, Name: "checkpoint", Msg: "Checkpoint is not necessary now."}
 		return false
@@ -83,7 +78,7 @@ func (f *StableBloomFilter) Checkpoint() bool {
 
 	f.mux.Lock()
 	defer f.mux.Unlock()
-	_, err = f.SBF.WriteTo(file)
+	_, err = f.CBF.WriteTo(file)
 	if err != nil {
 		f.LogCh() <- LogEvent{
 			Level: zerolog.ErrorLevel,
@@ -97,7 +92,7 @@ func (f *StableBloomFilter) Checkpoint() bool {
 	return true
 }
 
-func (f *StableBloomFilter) Boostrap(force bool) {
+func (f *ClassicBloomFilter) Boostrap(force bool) {
 	sourceFile := f.sourceFilepath
 
 	forceLoadFromSource := force && sourceFile != ""
@@ -134,11 +129,11 @@ func (f *StableBloomFilter) Boostrap(force bool) {
 	}
 }
 
-func (f *StableBloomFilter) Engine() ProbabilisticEngine {
-	return StableBloom
+func (f *ClassicBloomFilter) Engine() ProbabilisticEngine {
+	return ClassicBloom
 }
 
-func (f *StableBloomFilter) loadDump() {
+func (f *ClassicBloomFilter) loadDump() {
 	file, err := os.OpenFile(f.dumpFilepath, os.O_RDONLY, 0644)
 	if err != nil {
 		log.Error().Err(err).Send()
@@ -152,14 +147,14 @@ func (f *StableBloomFilter) loadDump() {
 		Msg:   fmt.Sprintf("Try load dump: %s!", f.dumpFilepath),
 	}
 
-	_, err = f.SBF.ReadFrom(file)
+	_, err = f.CBF.ReadFrom(file)
 
 	if err != nil {
 		log.Error().Err(err).Send()
 	}
 }
 
-func (f *StableBloomFilter) isDumpExist() bool {
+func (f *ClassicBloomFilter) isDumpExist() bool {
 	_, err := os.Stat(f.dumpFilepath)
 	if err != nil {
 		return os.IsExist(err)
@@ -167,11 +162,11 @@ func (f *StableBloomFilter) isDumpExist() bool {
 	return true
 }
 
-func (f *StableBloomFilter) getLineCount() int {
+func (f *ClassicBloomFilter) getLineCount() int {
 	return getLineCount(f.sourceFilepath)
 }
 
-func (f *StableBloomFilter) bootstrap() {
+func (f *ClassicBloomFilter) bootstrap() {
 	filename := f.sourceFilepath
 	f.mux.Lock()
 	defer f.mux.Unlock()
@@ -187,7 +182,7 @@ func (f *StableBloomFilter) bootstrap() {
 	added, scanned := 0, 0
 	var scanner *bufio.Scanner
 
-	if isGzSource(filename) {
+	if isGzSource(f.sourceFilepath) {
 		gz, errs := gzip.NewReader(file)
 		if errs != nil {
 			log.Error().Err(errs).Send()
@@ -208,7 +203,15 @@ func (f *StableBloomFilter) bootstrap() {
 
 	for scanner.Scan() {
 		scanned++
-		if !f.SBF.TestAndAdd(scanner.Bytes()) {
+		if scanned%1_000_000 == 0 {
+			f.LogCh() <- LogEvent{
+				Level: zerolog.InfoLevel,
+				Name:  bootstrapName,
+				Msg:   fmt.Sprintf("Прочитано: %s из [%s]", utils.HumInt(scanned), utils.HumInt(lineCount)),
+			}
+		}
+
+		if !f.CBF.TestAndAdd(scanner.Bytes()) {
 			added++
 			f.needCheckpoint = false
 			f.LogCh() <- LogEvent{Level: zerolog.InfoLevel, Name: "add", Count: 1.0}
@@ -237,13 +240,13 @@ func (f *StableBloomFilter) bootstrap() {
 	}
 }
 
-func (f *StableBloomFilter) printLogStat() {
-	msg := fmt.Sprintf("[P: %d] [K: %d] Cells: %s, Stable point: %f, FalsePositiveRate: %f",
-		f.SBF.P(),
-		f.SBF.K(),
-		utils.HumInt(int(f.SBF.Cells())),
-		f.SBF.StablePoint(),
-		f.SBF.FalsePositiveRate(),
+func (f *ClassicBloomFilter) printLogStat() {
+	msg := fmt.Sprintf("[Capacity: %s] [K: %d] Count: %s, FillRatio: %f, EstimatedFillRatio: %f",
+		utils.HumInt(int(f.CBF.Capacity())),
+		f.CBF.K(),
+		utils.HumInt(int(f.CBF.Count())),
+		f.CBF.FillRatio(),
+		f.CBF.EstimatedFillRatio(),
 	)
 	f.LogCh() <- LogEvent{Level: zerolog.DebugLevel, Name: bootstrapName, Msg: msg}
 }
