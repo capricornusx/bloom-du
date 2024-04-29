@@ -29,7 +29,7 @@ jobs:
           go-version: ${{ matrix.go-version }}
 
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@v3
+        uses: golangci/golangci-lint-action@v5
         with:
           # Optional: golangci-lint command line arguments.
           #args:
