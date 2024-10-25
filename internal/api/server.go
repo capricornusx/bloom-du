@@ -161,7 +161,6 @@ func handleSocket(conn net.Conn) {
 	}
 }
 
-// initMetrics Prometheus metrics
 func initMetrics() {
 	prometheus.MustRegister(CurrentConfig)
 	prometheus.MustRegister(Elements)
@@ -174,7 +173,6 @@ func measureHandler(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		started := time.Now()
 		path := r.URL.Path
-		// Создаем writer, который будет отслеживать код ответа
 		writer := &responseWriter{ResponseWriter: w}
 
 		if path == metricsPath || path == healthPath {
