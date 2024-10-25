@@ -138,8 +138,7 @@ dockers:
     # Default: 'docker'
     use: buildx
 
-    # Docker build flags.
-    # Templates: allowed
+    # Docker build flags. Templates: allowed
     build_flag_templates:
       # - --pull
       - --label=org.opencontainers.image.title={{.ProjectName}}
