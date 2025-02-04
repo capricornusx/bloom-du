@@ -48,7 +48,7 @@ jobs:
         # run: CGO_ENABLED=1 GOEXPERIMENT=loopvar go test -race ./...
 
       - name: Upload coverage report
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v5
         if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/release/'
         env:
           token: ${{ secrets.CODECOV_TOKEN }}
